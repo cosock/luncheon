@@ -1,11 +1,12 @@
 package = "luncheon"
 version = "dev-1"
 source = {
-   url = "*** please add URL for source tarball, zip or repository here ***"
+   url = "https://github.com/FreeMasen/luncheon",
+   tag = "dev-1"
 }
 description = {
-   homepage = "*** please enter a project homepage ***",
-   license = "*** please specify a license ***"
+   homepage = "https://github.com/FreeMasen/luncheon",
+   license = "MIT"
 }
 dependencies = {
    "net-url >= 0.9",
