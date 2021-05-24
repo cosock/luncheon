@@ -7,3 +7,5 @@ express/
 /.luarocks
 /init.lua
 *.rock
+*.out
+
