@@ -1,6 +1,8 @@
 # Luncheon
 
 HTTP types for Lua
+![Sandwiches on a plate](./Luncheon.svg)
+
 
 ## Usage
 
