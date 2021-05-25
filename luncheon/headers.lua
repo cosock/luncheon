@@ -145,9 +145,13 @@ function Headers.normalize_key(key)
 end
 
 ---Insert a single key value pair to the collection
+---@param key string
+---@param value string|string[]
+---@return Headers
 function Headers:append(key, value)
     _append(self, key, value)
     self.last_key = key
+    return self
 end
 
 ---Get a header from the map of headers
@@ -168,11 +172,10 @@ function Headers:get_one(key)
     end
 end
 
----Get a header from the map of headers
+---Get a header from the map of headers as a list of strings
 ---
 ---This will first normalize the provided key. For example
 ---'Content-Type' will be normalized to `content_type`.
----If more than one value is provided for that header
 ---@param key string
 ---@return string[]
 function Headers:get_all(key)
@@ -181,7 +184,7 @@ function Headers:get_all(key)
     if type(values) == 'string' then
         return {values}
     end
-    return self[k]
+    return values
 end
 
 return {
