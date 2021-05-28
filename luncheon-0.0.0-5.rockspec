@@ -1,8 +1,8 @@
 package = "luncheon"
-version = "0.0.0-4"
+version = "0.0.0-5"
 source = {
    url = "git://github.com/FreeMasen/luncheon",
-   tag = "v0.0.0-4"
+   tag = "v0.0.0-5"
 }
 description = {
    homepage = "https://github.com/FreeMasen/luncheon",

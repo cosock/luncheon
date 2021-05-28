@@ -1,5 +1,5 @@
 local MockSocket = require 'spec.mock_socket'.MockSocket
-local Response = require 'luncheon.response'.Response
+local Response = require 'luncheon.response'
 local ltn12 = require('ltn12')
 
 describe('Response', function()
@@ -30,6 +30,13 @@ describe('Response', function()
         local sock = MockSocket.new()
         local r = Response.new(sock):content_type('application/json')
         r:send('body')
+        local res = assert(sock.inner[1], 'nothing was sent')
+        assert(string.find(res, 'Content-Type: application/json', 0, true), 'expected application/json ' .. res)
+    end)
+    it('should retry on error', function()
+        local sock = MockSocket.new()
+        local r = Response.new(sock):content_type('application/json')
+        r:send('panic')
         local res = assert(sock.inner[1], 'nothing was sent')
         assert(string.find(res, 'Content-Type: application/json', 0, true), 'expected application/json ' .. res)
     end)
@@ -183,5 +190,48 @@ describe('Response', function()
             assert(err == 'Attempt to send on closed socket', string.format('%s', err))
             assert(sock.inner[1] == sock.inner[1]:gsub('closed', ''))
         end)
+    end)
+    it('content_type table fails', function ()
+        local r = Response.new(MockSocket.new())
+        local _, err = r:content_type({})
+        assert.is.equal('mime type must be a string, found table', err)
+    end)
+    it('content_length table fails', function ()
+        local r = Response.new(MockSocket.new())
+        local _, err = r:content_length({})
+        assert.is.equal('content length must be a number, found table', err)
+    end)
+    it('source works', function ()
+        local r = Response.new(MockSocket.new())
+        r:content_type('application/json')
+        r.headers.last_key = 'junk'
+        local lines = {
+            'HTTP/1.1 200 OK\r\n',
+            'Content-Type: application/json\r\n',
+            '\r\n',
+            ''
+        }
+        local idx = 1
+        for line in r:source() do
+            assert.is.equal(lines[idx], line)
+            idx = idx + 1
+        end
+    end)
+    it('nested source works', function ()
+        local r = Response.new(MockSocket.new())
+        r:content_type('application/json')
+        r.headers.last_key = 'junk'
+        r.body = function() return function () end end
+        local lines = {
+            'HTTP/1.1 200 OK\r\n',
+            'Content-Type: application/json\r\n',
+            '\r\n',
+            ''
+        }
+        local idx = 1
+        for line in r:source() do
+            assert.is.equal(lines[idx], line)
+            idx = idx + 1
+        end
     end)
 end)

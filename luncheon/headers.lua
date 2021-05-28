@@ -66,7 +66,7 @@ end
 ---@param key string
 ---@param value string
 ---@return string
-local function serialize_header(key, value)
+function Headers.serialize_header(key, value)
     if type(value) == 'table' then
         value = value[#value]
     end
@@ -91,7 +91,7 @@ function Headers:serialize()
     local ret = ''
     for key, value in pairs(self) do
         if key ~= 'last_key' then
-            ret = ret .. serialize_header(key, value) .. '\r\n'
+            ret = ret .. Headers.serialize_header(key, value) .. '\r\n'
         end
     end
     return ret
@@ -187,7 +187,4 @@ function Headers:get_all(key)
     return values
 end
 
-return {
-    Headers = Headers,
-    serialize_header = serialize_header,
-}
+return Headers

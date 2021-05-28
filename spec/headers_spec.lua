@@ -1,6 +1,4 @@
-local headers = require 'luncheon.headers'
-local Headers = headers.Headers
-local serialize_header = headers.serialize_header
+local Headers = require 'luncheon.headers'
 local normal_headers = require 'spec.normal_headers'
 
 describe('Headers', function ()
@@ -34,6 +32,11 @@ describe('Headers', function ()
             local _, err2 = h:append_chunk(' application/text')
             assert(err2 == nil, string.format('error frrom second append "%s"', err2))
             assert(h.accept == 'application/json  application/text', string.format('bad header "%s"', h.accept))
+        end)
+        it('bad append_chunk', function ()
+            local h = Headers.new()
+            local _, err1 = h:append_chunk(' bad')
+            assert(err1 == 'Header continuation with no key', err1)
         end)
         it('append', function()
             local h = Headers.new()
@@ -74,14 +77,14 @@ describe('Headers', function ()
     describe('serialize_header', function ()
         it('can handle normal header', function()
             for _, set in ipairs(normal_headers) do
-                local header = serialize_header(set[2], set[3])
+                local header = Headers.serialize_header(set[2], set[3])
                 assert(header == set[1], string.format('expected %s found %s', set[1], header))
             end
         end)
         it('multiline header', function()
-            local header1 = serialize_header('accept', {'application/json1'})
+            local header1 = Headers.serialize_header('accept', {'application/json1'})
             assert(header1 == 'Accept: application/json1', string.format('expected application/json1, found %s', header1))
-            local header2 = serialize_header('accept', {'application/json1', 'application/json2'})
+            local header2 = Headers.serialize_header('accept', {'application/json1', 'application/json2'})
             assert(header2 == 'Accept: application/json2', string.format('expected application/json2, found %s', header2))
         end)
     end)

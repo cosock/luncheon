@@ -1,4 +1,4 @@
-local headers = require 'luncheon.headers'
+local Headers = require 'luncheon.headers'
 local statuses = require 'luncheon.status'
 
 ---@class Response
@@ -41,7 +41,7 @@ end
 ---@return Response
 function Response.new(outgoing, send_buffer_size)
     local base = {
-        headers = headers.Headers.new(),
+        headers = Headers.new(),
         _status = 200,
         body = '',
         http_version = '1.1',
@@ -175,7 +175,6 @@ function Response:send(s)
         return Response._send_all(self.outgoing, self:_serialize())
     end
     return Response._send_all(self.outgoing, self.body)
-
 end
 
 ---Create a ltn12 sink for sending on this Response
@@ -199,6 +198,40 @@ function Response:sink()
     end
 end
 
+function Response:source()
+    local state = 'start'
+    local last_header, value
+    local body_iter
+    return function()
+        if state == 'start' then
+            state = 'headers'
+            return self:_generate_preamble() .. '\r\n'
+        end
+        if state == 'headers' then
+            last_header, value = next(self.headers, last_header)
+            if last_header == 'last_key' then
+                last_header, value = next(self.headers, last_header)
+            end
+            if not last_header then
+                state = 'body'
+                return '\r\n'
+            end
+            return Headers.serialize_header(last_header, value) .. '\r\n'
+        end
+        if state == 'body' then
+            if type(self.body) == 'string' then
+                state = nil
+                return self.body
+            elseif type(self.body == 'function') then
+                if not body_iter then
+                    body_iter = self.body()
+                end
+                return body_iter()
+            end
+        end
+    end
+end
+
 
 ---Check if this response has sent any bytes
 function Response:has_sent()
@@ -214,6 +247,4 @@ function Response:close()
     self.outgoing:close()
 end
 
-return {
-    Response = Response,
-}
+return Response

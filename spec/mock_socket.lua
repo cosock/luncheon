@@ -52,6 +52,10 @@ function MockSocket:send(s)
     if s == 'timeout' or s == 'closed' then
         return nil, s
     end
+    if string.find(s, 'panic') and not self.panicked then
+        self.panicked = true
+        error('panic')
+    end
     self.inner = self.inner or {}
     self.sent = self.sent + #(s or '')
     table.insert(self.inner, s)

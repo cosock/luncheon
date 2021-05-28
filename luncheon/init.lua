@@ -1,9 +1,9 @@
-local headers = require 'luncheon.headers'
-local request = require "luncheon.request"
-local response = require "luncheon.response"
+local Headers = require 'luncheon.headers'
+local Request = require "luncheon.request"
+local Response = require "luncheon.response"
 
 return {
-  Headers = headers.Headers,
-  Request = request.Request,
-  Response = response.Response,
+  Headers = Headers,
+  Request = Request,
+  Response = Response,
 }
