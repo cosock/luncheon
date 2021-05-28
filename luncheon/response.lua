@@ -1,57 +1,153 @@
 local Headers = require 'luncheon.headers'
 local statuses = require 'luncheon.status'
+local utils = require 'luncheon.utils'
+
+---@alias Source fun():fun():string
 
 ---@class Response
 ---@field public headers Headers The HTTP headers for this response
----@field public body string the contents of the response body
----@field public outgoing table The socket this response will send on
----@field private should_close boolean
+---@field public body string|Source the contents of the response body
+---@field private _incoming table|nil LuaSocket api conforming table
+---@field private _outgoing table|nil LuaSocket api conforming table
 local Response = {}
 Response.__index = Response
 
----Send all text provided, retrying on failure or timeout
----@param sock table The client socket to send on
----@param s string The string to send
-function Response._send_all(sock, s)
-    local total_sent = 0
-    local target = #s
-    local retries = 0
-    while total_sent < target and retries < 5 do
-        local success, sent_or_err, err = pcall(sock.send, sock, string.sub(s, total_sent))
-        if not success then
-            retries = retries + 1
-        else
-            if not sent_or_err then
-                if err == 'closed' then
-                    return nil, 'Attempt to send on closed socket'
-                elseif err == 'timeout' then
-                    retries = retries + 1
-                end
-            else
-                total_sent = total_sent + sent_or_err
-            end
-        end
-    end
-    return total_sent
-end
-
 ---create a response for to a corresponding request
----@param outgoing table anything that can call `:send()`
+---@param socket table anything that can call `:send()`
 ---@param send_buffer_size number|nil If provided, sending will happen in a buffered fashion
 ---@return Response
-function Response.new(outgoing, send_buffer_size)
+function Response.outgoing(socket, send_buffer_size)
     local base = {
         headers = Headers.new(),
         _status = 200,
         body = '',
         http_version = '1.1',
-        outgoing = outgoing,
+        _outgoing = socket,
         _send_buffer_size = send_buffer_size,
         chunks_sent = 0,
-        should_close = true,
     }
     setmetatable(base, Response)
     return base
+end
+
+function Response.incoming(socket)
+    local ret = setmetatable({
+        headers = Headers.new(),
+        _incoming = socket,
+    }, Response)
+    local line, err = ret:next_line()
+    if not line then
+        return nil, err
+    end
+    local pre, err = Response.parse_preamble(line)
+    if not pre then
+        return nil, err
+    end
+    ret._status = pre.status
+    ret._status_msg = pre.status_msg
+    ret.http_version = pre.http_version
+    ret:_fill_headers()
+    ret.body = function () return ret:body_source() end
+    return ret
+end
+
+function Response:body_source()
+    local recvd = 0
+    local target= self:get_content_length()
+    return function ()
+        if not target or target > recvd then
+            local line, err = self:next_line()
+            if line then
+                recvd = recvd + #line
+            end
+            return line, err
+        end
+    end
+end
+
+function Response.parse_preamble(line)
+    local version, status, msg = string.match(line, 'HTTP/([0-9.]+) ([^%s]+) ([^%s]+)')
+    if not version then
+        return nil, string.format('invalid preamble: %q', line)
+    end
+    
+    return {
+        http_version = tonumber(version),
+        status = math.tointeger(status),
+        status_msg = msg,
+    }
+end
+
+function Response:_fill_headers()
+    while true do
+        local done, err = self:_parse_header()
+        if err ~= nil then
+            return err
+        end
+        if done then
+            self.parsed_headers = true
+            return
+        end
+    end
+end
+
+---Read a single line from the socket and parse it as an http header
+---returning true when the end of the http headers
+---@return boolean|nil, string|nil
+function Response:_parse_header()
+    local line, err = self:_next_line()
+    if err ~= nil then
+        return nil, err
+    end
+    if self.headers == nil then
+        self.headers = Headers.new()
+    end
+    if line == '' then
+        return true
+    else
+        self.headers:append_chunk(line)
+    end
+    return false
+end
+
+function Response:_should_recv()
+    if not self.headers.content_length then
+        return true
+    end
+    self.headers.content_length = math.tointeger(self.headers.content_length)
+    return (self._recvd or 0) < self.headers.content_length
+end
+
+function Response:get_content_length()
+    local ty = type(self.headers.content_length)
+    if ty == 'number' then
+        return self.headers.content_length
+    end
+    if ty == 'string' then
+        local n = math.tointeger(self.headers.content_length)
+        if not n then
+            return nil, 'bad Content-Length header'
+        end
+        self.headers.content_length = n
+        return n
+    end
+    return nil, 'no content length header'
+end
+
+function Response:next_line()
+    if not self._incoming then
+        return nil, 'Outgoing request cannot receive'
+    end
+    if not self:_should_recv() then
+        return nil, nil
+    end
+    return self:_next_line()
+end
+
+function Response:_next_line()
+    local line, err = self._incoming:receive('*l')
+    self._recvd = (self._recvd or 0) + #(line or '')
+    return line, err
 end
 
 ---Set the status for this request
@@ -63,7 +159,7 @@ function Response:status(n)
     end
     if type(n) ~= 'number' then
         return nil, string.format('http status must be a number, found %s', type(n))
-    end 
+    end
     self._status = n
     return self
 end
@@ -153,7 +249,7 @@ function Response:_send_chunk()
     if not self:has_sent() then
         to_send = self:_generate_prebody()..to_send
     end
-    local num_sent, err = Response._send_all(self.outgoing, to_send)
+    local num_sent, err = utils.send_all(self._outgoing, to_send)
     self.body = ''
     if num_sent == nil then
         return nil, err
@@ -172,40 +268,25 @@ function Response:send(s)
     end
     if self._send_buffer_size == nil
     or not self:has_sent() then
-        return Response._send_all(self.outgoing, self:_serialize())
+        return utils.send_all(self._outgoing, self:_serialize())
     end
-    return Response._send_all(self.outgoing, self.body)
+    return utils.send_all(self._outgoing, self.body)
 end
 
----Create a ltn12 sink for sending on this Response
----If using this interface, it is a very good idea to already
----know the size of your response body and set that prior
----to passing this sink to a pump. If the Content-Length header
----is unset when this starts, there will be no way to back fill
----that value.
----
----For buffered writes, be sure to call :set_send_buffer_size
----@return fun(chunk:string|nil, err: string|nil): number|nil
-function Response:sink()
-    return function(chunk, err)
-        assert(not err, err)
-        if chunk == nil then
-            self:send()
-        else
-            self:append_body(chunk)
-        end
-        return 1
-    end
-end
-
+---Creates an LTN12 source for this request
+---@return function
 function Response:source()
     local state = 'start'
-    local last_header, value
-    local body_iter
+    local last_header, value, body_iter
+    local suffix = '\r\n'
+    if self._incoming then
+        suffix = ''
+    else
+    end
     return function()
         if state == 'start' then
             state = 'headers'
-            return self:_generate_preamble() .. '\r\n'
+            return self:_generate_preamble() .. suffix
         end
         if state == 'headers' then
             last_header, value = next(self.headers, last_header)
@@ -214,9 +295,9 @@ function Response:source()
             end
             if not last_header then
                 state = 'body'
-                return '\r\n'
+                return suffix
             end
-            return Headers.serialize_header(last_header, value) .. '\r\n'
+            return Headers.serialize_header(last_header, value) .. suffix
         end
         if state == 'body' then
             if type(self.body) == 'string' then
@@ -238,13 +319,13 @@ function Response:has_sent()
     if self._has_sent then
         return self._has_sent
     end
-    local _, s = self.outgoing:getstats()
+    local _, s = self._outgoing:getstats()
     self._has_sent = s > 0
     return self._has_sent
 end
 
 function Response:close()
-    self.outgoing:close()
+    return self._outgoing:close()
 end
 
 return Response

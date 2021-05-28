@@ -1,5 +1,6 @@
 local net_url = require 'net.url'
 local Headers = require 'luncheon.headers'
+local utils = require 'luncheon.utils'
 
 ---@class Request
 ---@field public method string the HTTP method for this request
@@ -9,9 +10,9 @@ local Headers = require 'luncheon.headers'
 ---@field public body string The contents of the request
 ---@field private err string|nil The _last_ error from the handler or middleware
 ---@field public handled boolean|nil `true` when the request has been handled
----@field public socket table Luasocket api conforming socket
+---@field private _incoming table|nil Luasocket api conforming socket
+---@field private _outgoing table|nil Luasocket api confirming socket
 local Request = {}
-
 Request.__index = Request
 
 ---Parse the first line of an HTTP request
@@ -77,10 +78,11 @@ function Request:_parse_header()
     end
     return false
 end
+
 ---Read a single line from the socket
 ---@return string|nil, string|nil
 function Request:_next_line()
-    local line, err = self.socket:receive('*l')
+    local line, err = self._incoming:receive('*l')
     return line, err
 end
 
@@ -103,10 +105,11 @@ end
 ---@return string|nil
 function Request:_fill_body()
     local len, err = self:content_length()
-    if len == nil then
+    if err ~= nil then
         return err
     end
-    self._body = self.socket:receive(len)
+    len = len or 'a*'
+    self._body = self._incoming:receive(len)
     self._received_body = true
 end
 
@@ -119,20 +122,25 @@ function Request:content_length()
         return nil, err
     end
     if headers.content_length == nil then
-        return 0
+        return nil
     end
-    return math.tointeger(headers.content_length) or 0
+    local n = math.tointeger(headers.content_length)
+    if not n then
+        return nil, 'Invalid content length'
+    end
+    headers.content_length = n
+    return n
 end
 
 ---Construct a new Request
----@param socket table The tcp client socket for this request
+---@param incoming table The tcp client socket for this request
 ---@return Request|nil, string|nil
-function Request.from_socket(socket)
-    if not socket then
+function Request.incoming(incoming)
+    if not incoming then
         return nil, 'cannot create request with nil socket'
     end
     local r = {
-        socket = socket,
+        _incoming = incoming,
         parsed_headers = false,
     }
     setmetatable(r, Request)
@@ -156,7 +164,7 @@ end
 ---@param method string
 ---@param url string|table
 ---@return Request
-function Request.new(method, url)
+function Request.outgoing(method, url, socket)
     if type(url) == 'string' then
         url = net_url.parse(url)
     end
@@ -165,6 +173,7 @@ function Request.new(method, url)
         url = url or '/',
         headers = Headers.new(),
         http_version = '1.1',
+        _outgoing = socket,
     }, Request)
 end
 
@@ -276,6 +285,17 @@ function Request:source()
             end
         end
     end
+end
+
+function Request:send()
+    if not self._outgoing then
+        return nil, 'cannot send without an outgoing socket'
+    end
+    for line in self:source() do
+        utils.send_all(self._outgoing, line)
+    end
+    local Response = require 'luncheon.response'
+    return Response.incoming(self._outgoing)
 end
 
 return Request

@@ -31,6 +31,7 @@ end
 
 function MockSocket:close()
     self.open = false
+    return 1
 end
 
 function MockSocket.new_with_preamble(method, path)
@@ -52,12 +53,24 @@ function MockSocket:send(s)
     if s == 'timeout' or s == 'closed' then
         return nil, s
     end
+    local cap = string.match(s, '^timeout(%d)$')
+    if cap then
+        local target = math.tointeger(cap)
+        if target < (self.timeouts or 0) then
+            self.timeouts = (self.timeouts or 0) + 1
+            return 'timeout'
+        end
+    end
     if string.find(s, 'panic') and not self.panicked then
         self.panicked = true
         error('panic')
     end
     self.inner = self.inner or {}
     self.sent = self.sent + #(s or '')
+    if string.find(s, 'clear') then
+        self.inner = {}
+        return
+    end
     table.insert(self.inner, s)
     if s then
         return #s

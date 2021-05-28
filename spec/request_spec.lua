@@ -35,7 +35,7 @@ describe('Request', function()
                 table.insert(inner, set[1])
             end
             table.insert(inner, '')
-            local r, e = Request.from_socket(MockSocket.new(inner))
+            local r, e = Request.incoming(MockSocket.new(inner))
             assert(e == nil, string.format('error in Request.from: %s', e))
             local headers, e2 = r:get_headers()
             assert(e2 == nil, string.format('error in get_headers %s', e2))
@@ -48,7 +48,7 @@ describe('Request', function()
         end)
         it('fails with no headers', function ()
             local inner = {'GET / HTTP/1.1 should work'}
-            local r, e = Request.from_socket(MockSocket.new(inner))
+            local r, e = Request.incoming(MockSocket.new(inner))
             assert(r)
             assert(not e, string.format('expected no error found %q', e))
             local headers, e2 = r:get_headers()
@@ -63,7 +63,7 @@ describe('Request', function()
                 '',
                 'asdfg',
             }
-            local r, e = Request.from_socket(MockSocket.new(lines))
+            local r, e = Request.incoming(MockSocket.new(lines))
             assert(e == nil, 'error parsing preamble ' .. (e or 'nil'))
             local e2 = r:_fill_body()
             assert(e2 == nil, 'error parsing body: ' .. (e2 or 'nil'))
@@ -76,7 +76,7 @@ describe('Request', function()
                 '',
                 'asdfg',
             }
-            local r, e = Request.from_socket(MockSocket.new(lines))
+            local r, e = Request.incoming(MockSocket.new(lines))
             assert(e == nil, 'error parsing preamble ' .. (e or 'nil'))
             local b, e2 = r:get_body()
             assert(e2 == nil, 'error parsing body: ' .. (e2 or 'nil'))
@@ -86,16 +86,35 @@ describe('Request', function()
             local lines = {
                 'POST / HTTP/1.1 should work',
             }
-            local r, e = Request.from_socket(MockSocket.new(lines))
+            local r, e = Request.incoming(MockSocket.new(lines))
             assert.is.falsy(e)
             local b, e2 = r:get_body()
             assert.is.falsy(b)
             assert.is.equal('empty', e2)
         end)
+        it('content-length nil', function ()
+            local lines = {
+                'POST / HTTP/1.1 should work',
+                '',
+            }
+            local r, e = Request.incoming(MockSocket.new(lines))
+            assert.is.falsy(e)
+            assert.is.falsy(r:content_length())
+        end)
+        it('content-length bad', function ()
+            local lines = {
+                'POST / HTTP/1.1 should work',
+                'Content-Length: a',
+                ''
+            }
+            local r, e = Request.incoming(MockSocket.new(lines))
+            assert.is.falsy(e)
+            assert.is.falsy(r:content_length())
+        end)
     end)
     describe('Manual Construction', function ()
         it('serialize works', function ()
-            local r = Request.new('GET', '/'):set_content_type('application/json'):set_body('{}')
+            local r = Request.outgoing('GET', '/'):set_content_type('application/json'):set_body('{}')
             local expected_lines = {
                 'GET / HTTP/1.1\r\n',
                 'Content-Type: application/json\r\n',
@@ -115,7 +134,7 @@ describe('Request', function()
             end
         end)
         it('source works in a loop string body', function ()
-            local r = Request.new('GET', '/'):set_content_type('application/json'):set_body('{}')
+            local r = Request.outgoing('GET', '/'):set_content_type('application/json'):set_body('{}')
             local expected_lines = {
                 'GET / HTTP/1.1\r\n',
                 'Content-Type: application/json\r\n',
@@ -134,7 +153,7 @@ describe('Request', function()
             end
         end)
         it('source works in a loop fn body', function ()
-            local r = Request.new('GET', '/'):set_content_type('application/json'):set_body(function()
+            local r = Request.outgoing('GET', '/'):set_content_type('application/json'):set_body(function()
                 local lines = {
                     'three',
                     'two',
@@ -165,10 +184,42 @@ describe('Request', function()
         end)
         it('serialize_path works', function ()
             local path_str = '/endpoint?asdf=2&qwer=3'
-            local r = Request.new('GET', path_str)
+            local r = Request.outgoing('GET', path_str)
             assert.are.equal(r:_serialize_path(), path_str)
             r.url = path_str
             assert.are.equal(r:_serialize_path(), path_str)
         end)
+    end)
+    it('outgoing cannot send', function ()
+        local r = Request.outgoing('GET', '/')
+        local res, err = r:send('')
+        assert.is.falsy(res)
+        assert.are.equal('cannot send without an outgoing socket', err)
+    end)
+    it('outgoing creates Response', function ()
+        --Mock socket impl needs to be updated to allow this to work. Currently the Response
+        --will read the body of the request, which ends up being an error because the preamble
+        --is in the wrong format
+        
+        -- local Response = require 'luncheon.response'
+        -- local r = Request.outgoing('GET', '/', MockSocket.new({})):set_body('clear')
+        -- assert.is.truthy(r)
+        -- local res = assert(r:send())
+        -- assert.are.same(Response, getmetatable(res))
+    end)
+    it('incoming fails with nil socket', function ()
+        local r, err = Request.incoming(nil)
+        assert.is.falsy(r)
+        assert.are.equal('cannot create request with nil socket', err)
+    end)
+    it('incoming fails with empty socket', function ()
+        local r, err = Request.incoming(MockSocket.new({}))
+        assert.is.falsy(r)
+        assert.are.equal('empty', err)
+    end)
+    it('incoming fails with bad pre', function ()
+        local r, err = Request.incoming(MockSocket.new({'junk'}))
+        assert.is.falsy(r)
+        assert.are.equal('Invalid http request first line: "junk"', err)
     end)
 end)

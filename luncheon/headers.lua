@@ -100,6 +100,9 @@ end
 ---Append a chunk of headers to this map
 ---@param text string
 function Headers:append_chunk(text)
+    if text == nil then
+        return nil, 'nil header'
+    end
     if string.match(text, '^%s+') ~= nil then
         if not self.last_key then
             return nil, 'Header continuation with no key'
