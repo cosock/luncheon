@@ -196,17 +196,7 @@ describe('Request', function()
         assert.is.falsy(res)
         assert.are.equal('cannot send without an outgoing socket', err)
     end)
-    it('outgoing creates Response', function ()
-        --Mock socket impl needs to be updated to allow this to work. Currently the Response
-        --will read the body of the request, which ends up being an error because the preamble
-        --is in the wrong format
-        
-        -- local Response = require 'luncheon.response'
-        -- local r = Request.outgoing('GET', '/', MockSocket.new({})):set_body('clear')
-        -- assert.is.truthy(r)
-        -- local res = assert(r:send())
-        -- assert.are.same(Response, getmetatable(res))
-    end)
+    
     it('incoming fails with nil socket', function ()
         local r, err = Request.incoming(nil)
         assert.is.falsy(r)

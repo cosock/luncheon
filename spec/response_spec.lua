@@ -5,7 +5,7 @@ local ltn12 = require('ltn12')
 describe('Response', function()
     describe('parse_preamble', function()
         it('HTTP/1.1 200 Ok should work', function()
-            local r, e = Response.parse_preamble('HTTP/1.1 200 Ok')
+            local r, e = Response._parse_preamble('HTTP/1.1 200 Ok')
             assert(e == nil)
             assert.are.equal(r.status, 200)
             assert.are.equal(r.status_msg, 'Ok')
@@ -269,6 +269,29 @@ describe('Response', function()
             idx = idx + 1
         end
     end)
+    it('incoming source body with lines #this', function ()
+        local expected = {
+            'HTTP/1.1 200 OK',
+            'Content-Length: 12',
+            '',
+            'asdf',
+            'qwer',
+            'zxcv',
+        }
+        local r = assert(Response.incoming(MockSocket.new({
+            'HTTP/1.1 200 OK',
+            'Content-Length: 12',
+            '',
+            'asdf',
+            'qwer',
+            'zxcv',
+        })))
+        local idx = 1
+        for line in r:source() do
+            assert.is_equal(expected[idx], line)
+            idx = idx + 1
+        end
+    end)
     it('Response.incoming fails with empty socket', function ()
         local r, err = Response.incoming(MockSocket.new({}))
         assert.is.falsy(r)
@@ -278,5 +301,42 @@ describe('Response', function()
         local r, err = Response.incoming(MockSocket.new({'junk'}))
         assert.is.falsy(r)
         assert.are.equal('invalid preamble: "junk"', err)
+    end)
+    it('Response.outgoing cannot recv', function ()
+        local r = assert(Response.outgoing('GET', '/', MockSocket.new()))
+        local _, err = r:next_line()
+        assert.are.equal('Outgoing request cannot receive', err)
+    end)
+    it('Response:get_content_length twice', function ()
+        local r = assert(Response.incoming(MockSocket.new({
+            'HTTP/1.1 200 OK',
+            'Content-Length: 1',
+            '',
+            '1'
+        })))
+        local len1 = assert(r:get_content_length())
+        local len2 = assert(r:get_content_length())
+        assert.are.equal(len1, len2)
+    end)
+    it('Response:get_content_length no header', function ()
+        local r = assert(Response.incoming(MockSocket.new({
+            'HTTP/1.1 200 OK',
+            '',
+            '1'
+        })))
+        local len, err = r:get_content_length()
+        assert(not len)
+        assert.are.equal('no content length header', err)
+    end)
+    it('Response:get_content_length bad header', function ()
+        local r = assert(Response.incoming(MockSocket.new({
+            'HTTP/1.1 200 OK',
+            'Content-Length: Q',
+            '',
+            '1'
+        })))
+        local len, err = r:get_content_length()
+        assert(not len)
+        assert.are.equal('bad Content-Length header', err)
     end)
 end)

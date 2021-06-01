@@ -16,6 +16,7 @@ local function send_all(sock, s)
                 elseif err == 'timeout' then
                     retries = retries + 1
                 end
+                
             else
                 total_sent = total_sent + sent_or_err
             end

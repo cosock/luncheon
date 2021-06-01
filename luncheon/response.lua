@@ -9,6 +9,7 @@ local utils = require 'luncheon.utils'
 ---@field public body string|Source the contents of the response body
 ---@field private _incoming table|nil LuaSocket api conforming table
 ---@field private _outgoing table|nil LuaSocket api conforming table
+---@field public http_version string
 local Response = {}
 Response.__index = Response
 
@@ -39,7 +40,7 @@ function Response.incoming(socket)
     if not line then
         return nil, err
     end
-    local pre, err = Response.parse_preamble(line)
+    local pre, err = Response._parse_preamble(line)
     if not pre then
         return nil, err
     end
@@ -47,16 +48,19 @@ function Response.incoming(socket)
     ret._status_msg = pre.status_msg
     ret.http_version = pre.http_version
     ret:_fill_headers()
-    ret.body = function () return ret:body_source() end
+    ret.body = function () return ret:_body_source() end
     return ret
 end
 
-function Response:body_source()
+---Generate a LTN12 of just the body portion of this response
+---Only usable on incoming responses
+---@return Source
+function Response:_body_source()
     local recvd = 0
-    local target= self:get_content_length()
+    local target = self:get_content_length()
     return function ()
         if not target or target > recvd then
-            local line, err = self:next_line()
+            local line, err = self:_next_line()
             if line then
                 recvd = recvd + #line
             end
@@ -65,7 +69,11 @@ function Response:body_source()
     end
 end
 
-function Response.parse_preamble(line)
+---Parse the first line of an incoming response
+---@param line string
+---@return nil|table @`{http_version: number, status: number, status_msg: string}`
+---@return nil|string @Error message if populated
+function Response._parse_preamble(line)
     local version, status, msg = string.match(line, 'HTTP/([0-9.]+) ([^%s]+) ([^%s]+)')
     if not version then
         return nil, string.format('invalid preamble: %q', line)
@@ -78,6 +86,8 @@ function Response.parse_preamble(line)
     }
 end
 
+---Fill this incoming request's headers
+---@return nil|string @if not `nil` an error message
 function Response:_fill_headers()
     while true do
         local done, err = self:_parse_header()
@@ -91,16 +101,14 @@ function Response:_fill_headers()
     end
 end
 
----Read a single line from the socket and parse it as an http header
----returning true when the end of the http headers
----@return boolean|nil, string|nil
+---Read a single line from the socket and parse it as an http header, appending to self.headers
+---returns true when the end of the http headers
+---@return boolean|nil @true when end of headers have been reached, nil when error
+---@return string|nil @when not nil the error message
 function Response:_parse_header()
     local line, err = self:_next_line()
     if err ~= nil then
         return nil, err
-    end
-    if self.headers == nil then
-        self.headers = Headers.new()
     end
     if line == '' then
         return true
@@ -110,6 +118,8 @@ function Response:_parse_header()
     return false
 end
 
+---If this response should attempt to receive more data
+---@return boolean
 function Response:_should_recv()
     if not self.headers.content_length then
         return true
@@ -118,6 +128,9 @@ function Response:_should_recv()
     return (self._recvd or 0) < self.headers.content_length
 end
 
+---Attempt to get the value from Content-Length header
+---@return number|nil @when not `nil` the Content-Length
+---@return string|nil @when not `nil` the error message
 function Response:get_content_length()
     local ty = type(self.headers.content_length)
     if ty == 'number' then
@@ -134,6 +147,10 @@ function Response:get_content_length()
     return nil, 'no content length header'
 end
 
+---Get the next line from an incoming request, checking first
+---if we have reached the end of the content
+---@return string|nil
+---@return string|nil
 function Response:next_line()
     if not self._incoming then
         return nil, 'Outgoing request cannot receive'
@@ -144,13 +161,17 @@ function Response:next_line()
     return self:_next_line()
 end
 
+---Receive the next line from an incoming request w/o checking
+---the content-length header
+---@return string|nil
+---@return string|nil
 function Response:_next_line()
     local line, err = self._incoming:receive('*l')
     self._recvd = (self._recvd or 0) + #(line or '')
     return line, err
 end
 
----Set the status for this request
+---Set the status for this outgoing request
 ---@param n number the 3 digit status
 ---@return Response
 function Response:status(n)
@@ -164,8 +185,9 @@ function Response:status(n)
     return self
 end
 
----set the content type of the outbound request
+---Set the Content-Type of the outbound request
 ---@param s string the mime type for this request
+---@return Response
 function Response:content_type(s)
     if type(s) ~= 'string' then
         return nil, string.format('mime type must be a string, found %s', type(s))
@@ -174,7 +196,7 @@ function Response:content_type(s)
     return self
 end
 
----Set the Content-Length header for this response
+---Set the Content-Length header of the outbound response
 ---@param len number The length of the content that will be sent
 ---@return Response
 function Response:content_length(len)

@@ -40,10 +40,6 @@ local function table_string(v, pre, visited)
   return string.format('%s\n%s}', ret, orig_pre)
 end
 
--- print(table_string(lunch))
--- print(table_string(lunch.Request))
--- print(table_string(getmetatable(lunch.Request)))
-
 local sock = socket.tcp()
 sock:connect('0.0.0.0', 8080)
 

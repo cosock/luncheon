@@ -1,8 +1,8 @@
 # Luncheon
 
 HTTP types for Lua
-![Sandwiches on a plate](./Luncheon.svg)
 
+![Sandwiches on a plate](./Luncheon.svg)
 
 ## Usage
 
@@ -22,13 +22,13 @@ assert(tcp:bind('0.0.0.0', 8080))
 assert(tcp:listen())
 while true do
   local incoming= assert(tcp:accept())
-  local req = assert(Request.new(incoming))
+  local req = assert(Request.incoming(incoming))
   print('Request')
   print('url', req.url.path)
   print('method', req.method)
   print('body', req:get_body())
-  local res = Response.new(incoming)
-  res:content_type(req.headers.content_type or 'text/plain')
-  res:send(req:get_body())
+  Response.outgoing(incoming)
+    :content_type(req.headers.content_type or 'text/plain')
+    :send(req:get_body())
 end
 ```
