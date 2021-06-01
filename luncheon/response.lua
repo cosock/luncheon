@@ -185,6 +185,11 @@ function Response:status(n)
     return self
 end
 
+function Response:add_header(key, value)
+    self.headers:append(key, value)
+    return self
+end
+
 ---Set the Content-Type of the outbound request
 ---@param s string the mime type for this request
 ---@return Response
@@ -192,8 +197,7 @@ function Response:content_type(s)
     if type(s) ~= 'string' then
         return nil, string.format('mime type must be a string, found %s', type(s))
     end
-    self.headers.content_type = s
-    return self
+    return self:add_header('content_type', s)
 end
 
 ---Set the Content-Length header of the outbound response
@@ -203,8 +207,7 @@ function Response:content_length(len)
     if type(len) ~= 'number' then
         return nil, string.format('content length must be a number, found %s', type(len))
     end
-    self.headers.content_length = string.format('%i', len)
-    return self
+    return self:add_header('content_length', string.format('%s', len))
 end
 
 ---Set the send buffer size to enable buffered writes
@@ -334,7 +337,6 @@ function Response:source()
         end
     end
 end
-
 
 ---Check if this response has sent any bytes
 function Response:has_sent()

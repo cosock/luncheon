@@ -8,7 +8,7 @@ HTTP types for Lua
 
 Luncheon provides data types that represent the request/response cycle of http communication.
 Both the `Request` and `Response` objects expect to receive a `luasocket` like interface for 
-sending and receiving hyper text but expose an ergonomic api for lazily parsing/generating the
+sending and receiving hyper text but expose an ergonomic api for lazily parsing/constructing the
 content of the messages.
 
 ### Basic echo server
@@ -29,6 +29,7 @@ while true do
   print('body', req:get_body())
   Response.outgoing(incoming)
     :content_type(req.headers.content_type or 'text/plain')
+    :add_header('Server', 'Luncheon Echo Server')
     :send(req:get_body())
 end
 ```
