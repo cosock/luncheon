@@ -1,8 +1,8 @@
 package = "luncheon"
-version = "0.0.0-6"
+version = "0.0.0-7"
 source = {
    url = "git://github.com/FreeMasen/luncheon",
-   tag = "v0.0.0-6"
+   tag = "v0.0.0-7"
 }
 description = {
    homepage = "https://github.com/FreeMasen/luncheon",
@@ -19,5 +19,6 @@ build = {
       ["luncheon.request"] = "luncheon/request.lua",
       ["luncheon.response"] = "luncheon/response.lua",
       ["luncheon.status"] = "luncheon/status.lua",
+      ["luncheon.utils"] = "luncheon/utils.lua",
    }
 }
