@@ -14,10 +14,10 @@ content of the messages.
 ### Basic echo server
 
 ```lua
-local Request = require 'luncheon.request'.Request
-local Response = require 'luncheo.response'.Response
-local socket = require 'socket' --luasocket
-local tcp = assert(socket.tcp())
+Request = require 'luncheon.request'
+Response = require 'luncheon.response'
+socket = require 'socket' --luasocket
+tcp = assert(socket.tcp())
 assert(tcp:bind('0.0.0.0', 8080))
 assert(tcp:listen())
 while true do
