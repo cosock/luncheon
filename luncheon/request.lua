@@ -9,11 +9,15 @@ local utils = require 'luncheon.utils'
 ---@field public headers Headers The HTTP headers for this request
 ---@field public body string The contents of the request
 ---@field private err string|nil The _last_ error from the handler or middleware
----@field public handled boolean|nil `true` when the request has been handled
----@field private _incoming table|nil Luasocket api conforming socket
----@field private _outgoing table|nil Luasocket api confirming socket
+---@field private _source fun():string ltn12 source
+---@field private _parsed_headers boolean
+---@field private _headers Headers
+---@field private _received_body boolean
+---@field private _body string|nil
 local Request = {}
 Request.__index = Request
+
+--#region Parser
 
 ---Parse the first line of an HTTP request
 ---@param line string
@@ -32,12 +36,40 @@ function Request._parse_preamble(line)
     }
 end
 
+---Construct a request from a ltn12 source function, this should always return a single line
+---when called
+---@param source fun():string|nil,string|nil
+function Request.source(source)
+    if not source then
+        return nil, 'cannot create request with nil source'
+    end
+    local r = {
+        _source = source,
+        _parsed_headers = false,
+    }
+    setmetatable(r, Request)
+    local line, acc_err = r:_next_line()
+    if acc_err then
+        return nil, acc_err
+    end
+    local pre, pre_err = Request._parse_preamble(line)
+    if pre_err then
+        return nil, pre_err
+    end
+    r.http_version = pre.http_version
+    r.method = pre.method
+    r.url = pre.url
+    return r
+end
+
+
+
 ---Get the headers for this request
 ---parsing the incoming stream of headers
 ---if not already parsed
 ---@return Headers, string|nil
 function Request:get_headers()
-    if self.parsed_headers == false then
+    if self._parsed_headers == false then
         local err = self:_fill_headers()
         if err ~= nil then
             return nil, err
@@ -54,7 +86,7 @@ function Request:_fill_headers()
             return err
         end
         if done then
-            self.parsed_headers = true
+            self._parsed_headers = true
             return
         end
     end
@@ -82,7 +114,7 @@ end
 ---Read a single line from the socket
 ---@return string|nil, string|nil
 function Request:_next_line()
-    local line, err = self._incoming:receive('*l')
+    local line, err = self._source()
     return line, err
 end
 
@@ -109,7 +141,7 @@ function Request:_fill_body()
         return err
     end
     len = len or 'a*'
-    self._body = self._incoming:receive(len)
+    self._body = self._source(len)
     self._received_body = true
 end
 
@@ -118,7 +150,7 @@ end
 ---@return number|nil, string|nil
 function Request:content_length()
     local headers, err = self:get_headers()
-    if err then
+    if not headers then
         return nil, err
     end
     if headers.content_length == nil then
@@ -132,48 +164,22 @@ function Request:content_length()
     return n
 end
 
----Construct a new Request
----@param incoming table The tcp client socket for this request
----@return Request|nil, string|nil
-function Request.incoming(incoming)
-    if not incoming then
-        return nil, 'cannot create request with nil socket'
-    end
-    local r = {
-        _incoming = incoming,
-        parsed_headers = false,
-    }
-    setmetatable(r, Request)
-    local line, acc_err = r:_next_line()
-    if acc_err then
-        return nil, acc_err
-    end
-    local pre, pre_err = Request._parse_preamble(line)
-    if pre_err then
-        return nil, pre_err
-    end
-    r.http_version = pre.http_version
-    r.method = pre.method
-    r.url = pre.url
-    return r
-end
+--#endregion Parser
 
--- Builder Pattern
-
----Create a new outbound request
----@param method string
----@param url string|table
+--#region Builder
+---Construct a request Builder
+---@param method string an http method string
+---@param url string|table the path for this request as a string or as a net_url table
 ---@return Request
-function Request.outgoing(method, url, socket)
+function Request.new(method, url)
     if type(url) == 'string' then
         url = net_url.parse(url)
     end
     return setmetatable({
         method = string.upper(method or 'GET'),
-        url = url or '/',
-        headers = Headers.new(),
+        url = url or net_url.parse('/'),
+        headers = Headers.new({content_length = 0}),
         http_version = '1.1',
-        _outgoing = socket,
     }, Request)
 end
 
@@ -198,25 +204,20 @@ end
 ---@param len number
 ---@return Request
 function Request:set_content_length(len)
-    self:add_header('content_length', len)
+    if self.headers.content_length == nil then
+        self:add_header('content_length', len)
+        return self
+    end
+    self.headers.content_length = len
     return self
 end
 
----Set the body for this outbound request
----The provided body argument can be a string or an iterator/ltn12 source function
----
----If `body` is a string, the `Content-Length` header will be set automatically to `#body`
----If `body` is not a string, the optional `len` property can be used to set the `Content-Length` header
----@param body string|fun():fun(err:string|nil,last:string|nil):string
----@param len number|nil The content length of the ltn12 source function
+---append the provided chunk to this Request's body
+---@param chunk string
 ---@return Request
-function Request:set_body(body, len)
-    if type(body) == 'string' then
-        self:set_content_length(#body)
-    elseif len then
-        self:set_content_length(len)
-    end
-    self._body = body
+function Request:append_body(chunk)
+    self.body = (self.body or '') .. chunk
+    self:set_content_length(#self.body)
     return self
 end
 
@@ -234,68 +235,57 @@ function Request:_serialize_path()
     return path .. '?' .. net_url.buildQuery(self.url.query)
 end
 
+function Request:serialize_preamble()
+    return string.format('%s %s HTTP/%s', string.upper(self.method), self:_serialize_path(), self.http_version)
+end
+
 ---Serialize this request into a single string for sending
 ---@return string
 function Request:serialize()
-    local ret = ''
-    for part in self:source() do
-        ret = ret .. part
-    end
-    return ret
+    self:content_length(#self.body)
+    local head = table.concat({
+        self:serialize_preamble(),
+        self.headers:serialize(),
+        ''
+    }, '\r\n')
+    return head .. self.body
 end
 
----Serialize this request as an ltn12 source function
----Each pre-body line will be sent as a chunk followed by
----either the full body if it is a string or this will delegate
----the iteration to the body ltn12 source body
----@return function
-function Request:source()
-    local state = 'start'
+---Serialize this request as an ltn12 source that will
+---provide the next line (including new line characters)
+---@return fun():string
+function Request:as_source()
+    local state = 'preamble'
     local last_header, value
-    local body_iter
-    return function ()
-        if state == 'start' then
+    local body = self.body or ''
+    return function()
+        if state == 'preamble' then
             state = 'headers'
-            return string.format(
-                '%s %s HTTP/1.1\r\n',
-                string.upper(self.method),
-                self:_serialize_path()
-            )
+            local pre = self:serialize_preamble()
+            return pre .. '\r\n'
         end
         if state == 'headers' then
             last_header, value = next(self.headers, last_header)
             if last_header == 'last_key' then
                 last_header, value = next(self.headers, last_header)
             end
-            if last_header then
-                return Headers.serialize_header(last_header, value) .. '\r\n'
+            if not last_header then
+                state = 'body'
+                return '\r\n'
             end
-            state = 'body'
-            return '\r\n'
+            return Headers.serialize_header(last_header, value) .. '\r\n'
         end
         if state == 'body' then
-            if type(self._body) == 'function' then
-                if not body_iter then
-                    body_iter = self._body()
-                end
-                return body_iter()
-            elseif type(self._body) == 'string' then
+            value, body = utils.next_line(body, true)
+            if not value then
                 state = nil
-                return self._body
+                return body
             end
+            return value
         end
     end
 end
 
-function Request:send()
-    if not self._outgoing then
-        return nil, 'cannot send without an outgoing socket'
-    end
-    for line in self:source() do
-        utils.send_all(self._outgoing, line)
-    end
-    local Response = require 'luncheon.response'
-    return Response.incoming(self._outgoing)
-end
+--#endregion Builder
 
 return Request
