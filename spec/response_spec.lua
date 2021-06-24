@@ -30,30 +30,46 @@ describe('Response', function()
             assert(err)
         end)
     end)
+    it('content_type string', function ()
+        local r = Response.new(200)
+        local _, err = r:set_content_type('application/json')
+        assert.is.falsy(err)
+        assert.is.equal('application/json', r:get_headers().content_type)
+    end)
     it('content_type table fails', function ()
         local r = Response.new(200)
-        local _, err = r:content_type({})
+        local _, err = r:set_content_type({})
         assert.is.equal('mime type must be a string, found table', err)
     end)
     it('content_length table fails', function ()
         local r = Response.new(200)
-        local _, err = r:content_length({})
+        local _, err = r:set_content_length({})
         assert.is.equal('content length must be a number, found table', err)
+    end)
+    it('seralize works', function ()
+        local r = Response.new(200)
+        assert(r:append_body('this is a body'))
+        assert.is.equal(table.concat({
+            'HTTP/1.1 200 OK\r\n',
+            'Content-Length: 14\r\n',
+            '\r\n',
+            'this is a body'
+        }), r:serialize())
     end)
     it('source will construct', function ()
         local r = assert(Response.source(utils.tcp_socket_source(MockSocket.new({'HTTP/1.1 200 Ok'}))))
     end)
-    it('Response.incoming fails with empty socket', function ()
+    it('Response.source fails with empty socket', function ()
         local r, err = Response.source(utils.tcp_socket_source(MockSocket.new({})))
         assert.is.falsy(r)
         assert.are.equal('empty', err)
     end)
-    it('Response.incoming fails with bad pre', function ()
+    it('Response.source fails with bad pre', function ()
         local r, err = Response.source(utils.tcp_socket_source(MockSocket.new({'junk'})))
         assert.is.falsy(r)
         assert.are.equal('invalid preamble: "junk"', err)
     end)
-    it('Response.outgoing cannot recv', function ()
+    it('Response.new cannot recv', function ()
         local r = assert(Response.new(200))
         local _, err = r:next_line()
         assert.are.equal('nil source', err)
@@ -77,7 +93,7 @@ describe('Response', function()
         }))))
         local len, err = r:get_content_length()
         assert(not len)
-        assert.are.equal('no content length header', err)
+        assert(not err)
     end)
     it('Response:get_content_length bad header', function ()
         local r = assert(Response.source(utils.tcp_socket_source(MockSocket.new({
@@ -89,5 +105,46 @@ describe('Response', function()
         local len, err = r:get_content_length()
         assert(not len)
         assert.are.equal('bad Content-Length header', err)
+    end)
+    it('Response:get_headers', function ()
+        local r = assert(Response.source(utils.tcp_socket_source(MockSocket.new({
+            'HTTP/1.1 200 OK',
+            'Content-Length: 1',
+            '',
+            '1'
+        }))))
+        local headers = assert(r:get_headers())
+        assert.are.equal('1', headers.content_length)
+    end)
+    it('Response:serialize', function ()
+        local r = assert(Response.source(utils.tcp_socket_source(MockSocket.new({
+            'HTTP/1.1 200 OK',
+            'Content-Length: 1',
+            '',
+            '1'
+        }))))
+        local headers = assert(r:get_headers())
+        assert.are.equal('1', headers.content_length)
+    end)
+    it('Response error socket', function ()
+        local r = assert(Response.source(utils.tcp_socket_source(MockSocket.new({
+            'HTTP/1.1 200 OK\r\n',
+            'Content-Length: 10\r\n',
+            '\r\n',
+            'timeout'
+        }))))
+        local body, err = r:get_body()
+        assert.is.falsy(body)
+        assert.are.equal('empty', err)
+    end)
+    it('Response error socket', function ()
+        local r = assert(Response.source(utils.tcp_socket_source(MockSocket.new({
+            'HTTP/1.1 200 OK\r\n',
+            'Content-Length: 10\r\n',
+            'timeout'
+        }))))
+        local headers, err = r:get_headers()
+        assert.is.falsy(headers)
+        assert.are.equal('timeout', err)
     end)
 end)

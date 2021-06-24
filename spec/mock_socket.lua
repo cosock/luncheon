@@ -8,6 +8,7 @@ function MockSocket.new(inner)
         sent = 0,
         inner = inner or {},
         open = true,
+        timeouts = 0,
     }
     setmetatable(ret, MockSocket)
     return ret
@@ -45,20 +46,23 @@ function MockSocket:receive()
         return nil, 'empty'
     end
     local part = table.remove(self.inner, 1)
+    if part == 'timeout' or part == 'closed' then
+        return nil, part
+    end
     self.recvd = self.recvd + #(part or '')
     return part
 end
 
 function MockSocket:send(s)
-    if s == 'timeout' or s == 'closed' then
+    if s == 'timeout' or s == 'closed' or s == 'error' then
         return nil, s
     end
-    local cap = string.match(s, '^timeout(%d)$')
+    local cap = string.match(s, '^(timeout|error)(%d)$')
     if cap then
         local target = math.tointeger(cap)
-        if target < (self.timeouts or 0) then
+        if target > (self.timeouts or 0) then
             self.timeouts = (self.timeouts or 0) + 1
-            return 'timeout'
+            return nil, 'timeout'
         end
     end
     if string.find(s, 'panic') and not self.panicked then

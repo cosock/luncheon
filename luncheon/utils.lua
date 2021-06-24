@@ -71,29 +71,67 @@ function m.next_line(chunk, include_nl)
     return string.gsub(line, '[\r\n]', ''), rem
 end
 
+---Get the first line from a chunk, discarding the new line characters, returning
+---the line followed by the remainder of the chunk after that line
+---@param chunk string
+---@return string @If not nil, the line found, if nil no new line character was found
+---@return string
+function m.extract_len(chunk, len)
+    local ret = string.sub(chunk, 1, len)
+    local rem = ''
+    if #chunk > len then
+        rem = string.sub(chunk, len+1)
+    end
+    return ret, rem
+end
+
 ---wrap a luasocket udp socket in an ltn12 source function, this will handle finding new line
 ---characters. This will call `receive` on the provided `socket` repeatedly until a new line is found
 ---@param socket luasocket.udp
 ---@return function():string,string
 function m.udp_socket_source(socket)
-    local buffer, line = '', nil
-    return function()
+    local buffer = ''
+    -- If this source is called with a length argument,
+    -- we have 
+    local function with_length(len)
+        local chunk = nil
+        local target_length = len - #buffer
+        while target_length > 0 do
+            local bytes, err = socket:receive(target_length)
+            if not bytes then
+                return nil, err
+            end
+            target_length = target_length - #bytes
+            buffer = buffer .. bytes
+        end
+        chunk, buffer = m.extract_len(buffer, len)
+        return chunk
+    end
+    local function next_line()
+        local chunk = nil
         if #buffer > 0 then
-            line, buffer = m.next_line(buffer)
-            if line then
-                return line
+            chunk, buffer = m.next_line(buffer)
+            if chunk then
+                return chunk
             end
         end
         while true do
-            local chunk, err = socket:receive()
-            if chunk == nil then
+            local bytes, err = socket:receive()
+            if bytes == nil then
                 return nil, err
             end
-            line, buffer = m.next_line(chunk)
-            if line then
-                return line
+            chunk, buffer = m.next_line(buffer .. bytes)
+            if chunk then
+                return chunk
             end
         end
+    end
+    return function(len)
+        if len then
+            return with_length(len)
+        end
+        return next_line()
+        
     end
 end
 

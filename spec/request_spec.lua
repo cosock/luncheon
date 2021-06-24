@@ -123,61 +123,75 @@ describe('Request', function()
             assert(string.find(ser, '\r\n\r\n'), 'headers end missing\n"' .. ser .. '"')
             assert(string.find(ser, '{}$'), 'body missing\n"' .. ser .. '"')
         end)
-        -- it('source works in a loop string body', function ()
-        --     local r = Request.outgoing('GET', '/'):set_content_type('application/json'):set_body('{}')
-        --     local expected_lines = {
-        --         'GET / HTTP/1.1\r\n',
-        --         'Content-Type: application/json\r\n',
-        --         'Content-Length: 2\r\n',
-        --         '\r\n',
-        --         '{}',
-        --     }
-        --     local line_n = 1
-        --     for line in r:source() do
-        --         if line_n > 1 and line_n < 4 then
-        --             assert(line == expected_lines[2] or line == expected_lines[3])
-        --         else
-        --             assert.is_equal(line, expected_lines[line_n])
-        --         end
-        --         line_n = line_n + 1
-        --     end
-        -- end)
-        -- it('source works in a loop fn body', function ()
-        --     local r = Request.outgoing('GET', '/'):set_content_type('application/json'):set_body(function()
-        --         local lines = {
-        --             'three',
-        --             'two',
-        --             'one',
-        --         }
-        --         return function ()
-        --             return table.remove(lines)
-        --         end
-        --     end, 11)
-        --     local expected_lines = {
-        --         'GET / HTTP/1.1\r\n',
-        --         'Content-Length: 11\r\n',
-        --         'Content-Type: application/json\r\n',
-        --         '\r\n',
-        --         'one',
-        --         'two',
-        --         'three',
-        --     }
-        --     local line_n = 1
-        --     for line in r:source() do
-        --         if line_n > 1 and line_n < 4 then
-        --             assert(line == expected_lines[2] or line == expected_lines[3])
-        --         else
-        --             assert.is_equal(line, expected_lines[line_n])
-        --         end
-        --         line_n = line_n + 1
-        --     end
-        -- end)
+        it('as_source works in a loop string body', function ()
+            local r = Request.new('GET', '/'):set_content_type('application/json'):append_body('{}')
+            local expected_lines = {
+                'GET / HTTP/1.1\r\n',
+                'Content-Type: application/json\r\n',
+                'Content-Length: 2\r\n',
+                '\r\n',
+                '{}',
+            }
+            local line_n = 1
+            for line in r:as_source() do
+                if line_n > 1 and line_n < 4 then
+                    assert(line == expected_lines[2] or line == expected_lines[3])
+                else
+                    assert.is_equal(line, expected_lines[line_n])
+                end
+                line_n = line_n + 1
+            end
+        end)
+        it('as_source works with a multi-line body', function ()
+            local r = Request.new('GET', '/'):set_content_type('application/json'):append_body(
+                'one\n'
+            ):append_body('two\n')
+            :append_body('three')
+            local expected_lines = {
+                'GET / HTTP/1.1\r\n',
+                'Content-Length: 13\r\n',
+                'Content-Type: application/json\r\n',
+                '\r\n',
+                'one\n',
+                'two\n',
+                'three',
+            }
+            local line_n = 1
+            for line in r:as_source() do
+                if line_n > 1 and line_n < 4 then
+                    assert(line == expected_lines[2] or line == expected_lines[3], string.format('line: %q\n2: %q\n3: %q', line, expected_lines[2], expected_lines[3]))
+                else
+                    assert(expected_lines[line_n] == line, string.format('%s %q ~= %q', line_n, expected_lines[line_n], line))
+                end
+                line_n = line_n + 1
+            end
+        end)
+        it('serialize works', function ()
+            local r = Request.new('GET', '/'):append_body(
+                'one\n'
+            ):append_body('two\n')
+            :append_body('three')
+            local expected = table.concat({
+                'GET / HTTP/1.1\r\n',
+                'Content-Length: 13\r\n',
+                '\r\n',
+                'one\n',
+                'two\n',
+                'three',
+            })
+            assert.are.same(expected, r:serialize())
+        end)
         it('serialize_path works', function ()
             local path_str = '/endpoint?asdf=2&qwer=3'
             local r = Request.new('GET', path_str)
             assert.are.equal(r:_serialize_path(), path_str)
             r.url = path_str
             assert.are.equal(r:_serialize_path(), path_str)
+        end)
+        it('set_content_length', function ()
+            local r = Request.new('GET', '/')
+            r.headers.content_length = nil
+            assert(r:set_content_length(10))
         end)
     end)
     it('source fails with nil source', function ()

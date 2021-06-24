@@ -8,7 +8,6 @@ local utils = require 'luncheon.utils'
 ---@field public http_version string The http version from the request preamble
 ---@field public headers Headers The HTTP headers for this request
 ---@field public body string The contents of the request
----@field private err string|nil The _last_ error from the handler or middleware
 ---@field private _source fun():string ltn12 source
 ---@field private _parsed_headers boolean
 ---@field private _headers Headers
@@ -204,6 +203,7 @@ end
 ---@param len number
 ---@return Request
 function Request:set_content_length(len)
+    len = tostring(len)
     if self.headers.content_length == nil then
         self:add_header('content_length', len)
         return self

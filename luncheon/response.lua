@@ -8,12 +8,14 @@ local utils = require 'luncheon.utils'
 ---@field public status number The HTTP status 3 digit number
 ---@field public http_version string
 ---@field private _source fun(pat:string|nil):string ltn12 source
+---@field private _parsed_headers boolean
+---@field private _received_body boolean
 local Response = {}
 Response.__index = Response
 
---[[
-**Parser
-]]
+--#endregion
+--#region Parser
+
 
 ---Create a request parser from an ltn12 source function
 ---@param source fun():string
@@ -23,6 +25,7 @@ function Response.source(source)
     local ret = setmetatable({
         headers = Headers.new(),
         _source = source,
+        _parsed_headers = false,
     }, Response)
     local line, err = ret:next_line()
     if not line then
@@ -35,7 +38,6 @@ function Response.source(source)
     ret.status = pre.status
     ret.status_msg = pre.status_msg
     ret.http_version = pre.http_version
-    ret:_fill_headers()
     return ret
 end
 
@@ -64,10 +66,20 @@ function Response:_fill_headers()
             return err
         end
         if done then
-            self.parsed_headers = true
+            self._parsed_headers = true
             return
         end
     end
+end
+
+function Response:get_headers()
+    if not self._parsed_headers then
+        local err = self:_fill_headers()
+        if err ~= nil then
+            return nil, err
+        end
+    end
+    return self.headers
 end
 
 ---Read a single line from the socket and parse it as an http header, appending to self.headers
@@ -91,19 +103,20 @@ end
 ---@return number|nil @when not `nil` the Content-Length
 ---@return string|nil @when not `nil` the error message
 function Response:get_content_length()
-    local ty = type(self.headers.content_length)
-    if ty == 'number' then
-        return self.headers.content_length
+    if not self._parsed_headers then
+        self:_fill_headers() 
     end
-    if ty == 'string' then
+    if not self._content_length then
+        if not self.headers.content_length then
+            return
+        end 
         local n = math.tointeger(self.headers.content_length)
         if not n then
             return nil, 'bad Content-Length header'
         end
-        self.headers.content_length = n
-        return n
+        self._content_length = n
     end
-    return nil, 'no content length header'
+    return self._content_length
 end
 
 ---Get the next line from an incoming request, checking first
@@ -117,8 +130,31 @@ function Response:next_line()
     return self:_next_line()
 end
 
+---Read from the socket, filling the body property
+---of this request
+---@return string|nil
+function Response:_fill_body()
+    local len, err = self:get_content_length()
+    if err ~= nil then
+        return err
+    end
+    len = len or 'a*'
+    local body, err = self._source(len)
+    if not body then
+        return err
+    end
+    self.body = body
+    self._received_body = true
+end
+
 function Response:get_body()
-    assert(false, 'TODO fill in this fn!')
+    if not self._received_body then
+        local err = self:_fill_body()
+        if err ~= nil then
+            return nil, err
+        end
+    end
+    return self.body
 end
 
 ---Receive the next line from an incoming request w/o checking
@@ -131,9 +167,8 @@ function Response:_next_line()
     return line, err
 end
 
---[[
-**Builder**
-]]
+--#region builder
+
 function Response.new(status_code)
     return setmetatable(
         {
@@ -142,12 +177,16 @@ function Response.new(status_code)
             http_version = 1.1,
             headers = Headers.new(),
             body = '',
+            _parsed_headers = true,
         },
         Response
     )
 end
 
 function Response:add_header(key, value)
+    if type(value) ~= 'string' then
+        value = tostring(value)
+    end
     self.headers:append(key, value)
     return self
 end
@@ -155,7 +194,7 @@ end
 ---Set the Content-Type of the outbound request
 ---@param s string the mime type for this request
 ---@return Response
-function Response:content_type(s)
+function Response:set_content_type(s)
     if type(s) ~= 'string' then
         return nil, string.format('mime type must be a string, found %s', type(s))
     end
@@ -165,17 +204,17 @@ end
 ---Set the Content-Length header of the outbound response
 ---@param len number The length of the content that will be sent
 ---@return Response
-function Response:content_length(len)
+function Response:set_content_length(len)
     if type(len) ~= 'number' then
         return nil, string.format('content length must be a number, found %s', type(len))
     end
-    return self:add_header('content_length', string.format('%s', len))
+    return self:add_header('content_length', string.format('%i', len))
 end
 
 ---Serialize this full response into a string
 ---@return string
-function Response:_serialize()
-    self:content_length(#self.body)
+function Response:serialize()
+    self:set_content_length(#self.body)
     return self:_generate_prebody()
         .. (self.body or '')
 end
@@ -203,6 +242,7 @@ end
 ---@return Response
 function Response:append_body(s)
     self.body = (self.body or '') .. s
+    self:set_content_length(#self.body)
     return self
 end
 
@@ -253,5 +293,7 @@ function Response:as_source()
         end
     end
 end
+
+--#endregion
 
 return Response
