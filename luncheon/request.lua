@@ -184,8 +184,11 @@ function Request.new(method, url)
 end
 
 ---Add a header to the internal map of headers
----@param key string
----@param value string
+---note: this is additive, so adding X-Forwarded-For twice will
+---cause there to be multiple X-Forwarded-For entries in the serialized
+---headers
+---@param key string The Header's key
+---@param value string The Header's value
 ---@return Request
 function Request:add_header(key, value)
     self.headers:append(key, value)
@@ -194,6 +197,8 @@ end
 
 ---Set the Content-Type header for this request
 ---convenience wrapper around self:add_header('content_type', len)
+---@param ct string The mime type to add as the Content-Type header's value
+---@return Request
 function Request:set_content_type(ct)
     self:add_header('content_type', ct)
     return self
@@ -201,7 +206,7 @@ end
 
 ---Set the Content-Length header for this request
 ---convenience wrapper around self:add_header('content_length', len)
----@param len number
+---@param len number The Expected length of the body
 ---@return Request
 function Request:set_content_length(len)
     len = tostring(len)
@@ -214,7 +219,7 @@ function Request:set_content_length(len)
 end
 
 ---append the provided chunk to this Request's body
----@param chunk string
+---@param chunk string The text to add to this request's body
 ---@return Request
 function Request:append_body(chunk)
     self.body = (self.body or '') .. chunk
@@ -235,17 +240,18 @@ function Request:_serialize_path()
     end
     return path .. '?' .. net_url.buildQuery(self.url.query)
 end
-
-function Request:serialize_preamble()
+---Private method for serializing the first line of the request
+---@return string
+function Request:_serialize_preamble()
     return string.format('%s %s HTTP/%s', string.upper(self.method), self:_serialize_path(), self.http_version)
 end
 
----Serialize this request into a single string for sending
+---Serialize this request into a single string
 ---@return string
 function Request:serialize()
     self:content_length(#self.body)
     local head = table.concat({
-        self:serialize_preamble(),
+        self:_serialize_preamble(),
         self.headers:serialize(),
         ''
     }, '\r\n')
@@ -253,7 +259,8 @@ function Request:serialize()
 end
 
 ---Serialize this request as an ltn12 source that will
----provide the next line (including new line characters)
+---provide the next line (including new line characters).
+---This will split the body on any internal new lines as well
 ---@return fun():string
 function Request:as_source()
     local state = 'preamble'
@@ -262,7 +269,7 @@ function Request:as_source()
     return function()
         if state == 'preamble' then
             state = 'headers'
-            local pre = self:serialize_preamble()
+            local pre = self:_serialize_preamble()
             return pre .. '\r\n'
         end
         if state == 'headers' then
