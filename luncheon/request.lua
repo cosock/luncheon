@@ -37,9 +37,9 @@ function Request._parse_preamble(line)
     }
 end
 
----Construct a request from a ltn12 source function, this should always return a single line
----when called
----@param source fun():string|nil,string|nil
+---Construct a request from a ltn12 source function
+---@param source fun():string this should always return a single line when called
+---@return Request
 function Request.source(source)
     if not source then
         return nil, 'cannot create request with nil source'
