@@ -57,12 +57,15 @@ function MockSocket:send(s)
     if s == 'timeout' or s == 'closed' or s == 'error' then
         return nil, s
     end
-    local cap = string.match(s, '^(timeout|error)(%d)$')
-    if cap then
-        local target = math.tointeger(cap)
-        if target > (self.timeouts or 0) then
+    local err, ct = string.match(s, '^(timeout)(%d)$')
+    if not err then
+        err, ct = string.match(s, '^(error)(%d)$')
+    end
+    if err then
+        local target = math.tointeger(ct)
+        if (self.timeouts or 0) < target then
             self.timeouts = (self.timeouts or 0) + 1
-            return nil, 'timeout'
+            return nil, err
         end
     end
     if string.find(s, 'panic') and not self.panicked then

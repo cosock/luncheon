@@ -116,6 +116,16 @@ describe('Response', function()
         local headers = assert(r:get_headers())
         assert.are.equal('1', headers.content_length)
     end)
+    it('Response:_fill_body bad content-length', function ()
+        local r = assert(Response.source(utils.tcp_socket_source(MockSocket.new({
+            'HTTP/1.1 200 OK',
+            'Content-Length: Q',
+            '',
+            '1'
+        }))))
+        local err = r:_fill_body()
+        assert.are.equal('bad Content-Length header', err)
+    end)
     it('Response:serialize', function ()
         local r = assert(Response.source(utils.tcp_socket_source(MockSocket.new({
             'HTTP/1.1 200 OK',
@@ -146,5 +156,37 @@ describe('Response', function()
         local headers, err = r:get_headers()
         assert.is.falsy(headers)
         assert.are.equal('timeout', err)
+    end)
+    it('Response:add_header non-strings', function ()
+        local t = {}
+        local f = function () end
+        local r = assert(Response.new())
+            :add_header('X-Integer-Value', 1)
+            :add_header('X-Number-Value', 1.1)
+            :add_header('X-Table-Value', t)
+            :add_header('X-Function-Value', f)
+            :add_header('X-Boolean-Value', true)
+        assert.are.equal('1', r.headers.x_integer_value)
+        assert.are.equal('1.1', r.headers.x_number_value)
+        assert.are.equal(tostring(t), r.headers.x_table_value)
+        assert.are.equal(tostring(f), r.headers.x_function_value)
+        assert.are.equal(tostring(true), r.headers.x_boolean_value)
+    end)
+    it('Response:as_source multi-line body', function ()
+        local r = assert(Response.new())
+            :append_body('First Line\n')
+            :append_body('Second Line')
+        local ct = 1
+        local expected_lines = {
+            'HTTP/1.1 200 OK\r\n',
+            'Content-Length: 22\r\n',
+            '\r\n',
+            'First Line\n',
+            'Second Line',
+        }
+        for line in r:as_source() do
+            assert.are.equal(expected_lines[ct], line)
+            ct = ct + 1
+        end
     end)
 end)

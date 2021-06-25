@@ -3,6 +3,9 @@ local Headers = require 'luncheon.headers'
 local utils = require 'luncheon.utils'
 
 ---@class Request
+---
+---An HTTP Request
+---
 ---@field public method string the HTTP method for this request
 ---@field public url table The parse url of this request
 ---@field public http_version string The http version from the request preamble
@@ -139,8 +142,7 @@ function Request:_fill_body()
     if err ~= nil then
         return err
     end
-    len = len or 'a*'
-    self._body = self._source(len)
+    self._body = self._source(len or 0)
     self._received_body = true
 end
 
@@ -266,7 +268,7 @@ function Request:as_source()
         end
         if state == 'headers' then
             last_header, value = next(self.headers, last_header)
-            if last_header == 'last_key' then
+            if last_header == '_last_key' then
                 last_header, value = next(self.headers, last_header)
             end
             if not last_header then

@@ -1,7 +1,16 @@
 
 ---@class Headers
+---
 ---A map of the key value pairs from the header portion
----of an HTTP request
+---of an HTTP request or response. The fields listed below
+---are some common headers but the list is not exhaustive.
+---
+---When each header is serialized, it is added as a property with
+---lower_snake_case. For example, `X-Forwarded-For` becomes `x_forwarded_for`.
+---
+---Typically each header's value will be a string, however if there are multiple entries
+---for any header, it will be a table of strings.
+---
 ---@field public accept string
 ---@field public accept_charset string
 ---@field public accept_encoding string
@@ -85,12 +94,12 @@ function Headers.serialize_header(key, value)
     return string.format('%s: %s', replaced, value)
 end
 
----Serialize the whole set of headers seperating them with a '\r\n'
+---Serialize the whole set of headers separating them with a '\\r\\n'
 ---@return string
 function Headers:serialize()
     local ret = ''
     for key, value in pairs(self) do
-        if key ~= 'last_key' then
+        if key ~= '_last_key' then 
             ret = ret .. Headers.serialize_header(key, value) .. '\r\n'
         end
     end
@@ -104,16 +113,16 @@ function Headers:append_chunk(text)
         return nil, 'nil header'
     end
     if string.match(text, '^%s+') ~= nil then
-        if not self.last_key then
+        local last_key = rawget(self, '_last_key')
+        if not last_key then
             return nil, 'Header continuation with no key'
         end
-        local existing = self[self.last_key]
-        self[self.last_key] = string.format('%s %s', existing, text)
+        local existing = self[last_key]
+        self[last_key] = string.format('%s %s', existing, text)
         return 1
     end
-    for raw_key, value in string.gmatch(text, '([0-9a-zA-Z\\-]+): (.+);?') do
-        local key = Headers.normalize_key(raw_key)
-        self:append(key, value)
+    for raw_key, value in string.gmatch(text, '([^%c()<>@,;:\\"/%[%]?={} \t]+): (.+);?') do
+        self:append(raw_key, value)
     end
     return 1
 end
@@ -152,8 +161,9 @@ end
 ---@param value string|string[]
 ---@return Headers
 function Headers:append(key, value)
+    key = Headers.normalize_key(key)
     _append(self, key, value)
-    self.last_key = key
+    rawset(self, '_last_key', key)
     return self
 end
 

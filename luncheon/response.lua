@@ -3,6 +3,9 @@ local statuses = require 'luncheon.status'
 local utils = require 'luncheon.utils'
 
 ---@class Response
+---
+---An HTTP Response
+---
 ---@field public headers Headers The HTTP headers for this response
 ---@field public body string the contents of the response body
 ---@field public status number The HTTP status 3 digit number
@@ -138,7 +141,7 @@ function Response:_fill_body()
     if err ~= nil then
         return err
     end
-    len = len or 'a*'
+    len = len or '*a'
     local body, err = self._source(len)
     if not body then
         return err
@@ -170,6 +173,15 @@ end
 --#region builder
 
 function Response.new(status_code)
+    if status_code == nil then
+        status_code = 200
+    end
+    if ({string = true, number = true})[type(status_code)] then
+        status_code = math.tointeger(status_code)
+    else
+        error(string.format('Invalid status code %q', status_code))
+    end
+    
     return setmetatable(
         {
             status = status_code or 200,
@@ -274,7 +286,7 @@ function Response:as_source()
         end
         if state == 'headers' then
             last_header, value = next(self.headers, last_header)
-            if last_header == 'last_key' then
+            if last_header == '_last_key' then
                 last_header, value = next(self.headers, last_header)
             end
             if not last_header then

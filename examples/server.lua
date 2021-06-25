@@ -13,19 +13,21 @@ while true do
     print('error', err)
     break
   end
-  local req = lunch.Request.incoming(incoming)
+  local req = lunch.Request.source(
+    lunch.utils.tcp_socket_source(incoming)
+  )
   print('into request')
   print('url', req.url.path)
   print('method', req.method)
   print('body', req:get_body())
-  local res = assert(lunch.Response.outgoing(incoming)
-    :content_length(math.tointeger(req:get_headers().content_length or 0) or 0))
+  local res = assert(lunch.Response.new()
+    :set_content_length(math.tointeger(req:get_headers().content_length or 0) or 0))
+    :append_body(req:get_body())
   print('into response')
-  for part in res:source() do
+  for part in res:as_source() do
     print('sending', string.format('%q', part))
-    assert(incoming:send(part))
+    assert(lunch.utils.send_all(incoming, part))
   end
-  assert(incoming:send(req:get_body()))
   print('sent')
-  res:close()
+  incoming:close()
 end

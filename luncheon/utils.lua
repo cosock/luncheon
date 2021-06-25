@@ -17,11 +17,12 @@ function m.send_all(sock, s)
     local target = #s
     local retries = 0
     while total_sent < target and retries < 5 do
-        local success, sent_or_err, err = pcall(sock.send, sock, string.sub(s, total_sent))
-        if not success then
+        local res = table.pack(pcall(sock.send, sock, string.sub(s, total_sent)))
+        if not res[1] then
             retries = retries + 1
         else
-            if not sent_or_err then
+            local sent, err = res[2], res[3]
+            if not sent then
                 if err == 'closed' then
                     return nil, 'Attempt to send on closed socket'
                 elseif err == 'timeout' then
@@ -30,7 +31,7 @@ function m.send_all(sock, s)
                     return nil, err, total_sent
                 end
             else
-                total_sent = total_sent + sent_or_err
+                total_sent = total_sent + sent
             end
         end
     end
