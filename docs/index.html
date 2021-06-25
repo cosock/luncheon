@@ -1,0 +1,314 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Luncheon &mdash; Luncheon</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Request" href="request.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="#" class="icon icon-home"> Luncheon
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="request.html">Request</a></li>
+<li class="toctree-l1"><a class="reference internal" href="response.html">Response</a></li>
+<li class="toctree-l1"><a class="reference internal" href="headers.html">Headers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">Luncheon</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Luncheon</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="toctree-wrapper compound">
+</div>
+<div class="section" id="luncheon">
+<h1>Luncheon<a class="headerlink" href="#luncheon" title="Permalink to this headline">¶</a></h1>
+<p>HTTP types for Lua</p>
+<a class="reference external image-reference" href="./Luncheon.svg"><img alt="Luncheon Logo" src="./Luncheon.svg" /></a>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>Luncheon provides Lua tables that represent HTTP <code class="docutils literal notranslate"><span class="pre">Request</span></code>s and <code class="docutils literal notranslate"><span class="pre">Response</span></code>s and
+a way to parse or build them.</p>
+<div class="section" id="parsing">
+<h3>Parsing<a class="headerlink" href="#parsing" title="Permalink to this headline">¶</a></h3>
+<p>Both <code class="docutils literal notranslate"><span class="pre">Request</span></code> and <code class="docutils literal notranslate"><span class="pre">Response</span></code> expose a constructor <code class="docutils literal notranslate"><span class="pre">source</span></code>, which expects the only argument to
+be a function that returns a single line of the request when called. So a simple example of that
+might look like this.</p>
+<div class="highlight-lua notranslate"><div class="highlight"><pre><span></span><span class="kd">local</span> <span class="n">Request</span> <span class="o">=</span> <span class="s1">&#39;luncheon.request&#39;</span>
+<span class="kd">local</span> <span class="n">req_lines</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s1">&#39;GET / HTTP/1.1&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;Content-Length: 0&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;&#39;</span>
+<span class="p">}</span>
+<span class="kd">local</span> <span class="n">req</span> <span class="o">=</span> <span class="n">Request</span><span class="p">.</span><span class="n">source</span><span class="p">(</span><span class="kr">function</span><span class="p">()</span>
+  <span class="kr">return</span> <span class="nb">table.remove</span><span class="p">(</span><span class="n">req_lines</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="kr">end</span><span class="p">)</span>
+<span class="nb">assert</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;GET&#39;</span><span class="p">)</span>
+<span class="nb">assert</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">path</span> <span class="o">==</span> <span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="nb">assert</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">http_version</span> <span class="o">==</span> <span class="mf">1.1</span><span class="p">)</span>
+<span class="nb">assert</span><span class="p">(</span><span class="n">req</span><span class="p">:</span><span class="n">get_headers</span><span class="p">().</span><span class="n">content_length</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="kd">local</span> <span class="n">Response</span> <span class="o">=</span> <span class="s1">&#39;luncheon.response&#39;</span>
+<span class="kd">local</span> <span class="n">res_lines</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s1">&#39;HTTP/1.1 200 Ok&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;Content-Length: 0&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;&#39;</span>
+<span class="p">}</span>
+<span class="kd">local</span> <span class="n">res</span> <span class="o">=</span> <span class="n">Response</span><span class="p">.</span><span class="n">source</span><span class="p">(</span><span class="kr">function</span><span class="p">()</span>
+  <span class="kr">return</span> <span class="nb">table.remove</span><span class="p">(</span><span class="n">res_lines</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="kr">end</span><span class="p">)</span>
+<span class="nb">assert</span><span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">200</span><span class="p">)</span>
+<span class="nb">assert</span><span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="n">status_msg</span> <span class="o">==</span> <span class="s1">&#39;Ok&#39;</span><span class="p">)</span>
+<span class="nb">assert</span><span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="n">http_version</span> <span class="o">==</span> <span class="mf">1.1</span><span class="p">)</span>
+<span class="nb">assert</span><span class="p">(</span><span class="n">res</span><span class="p">:</span><span class="n">get_headers</span><span class="p">().</span><span class="n">content_length</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Notice how in both of the above examples, the lines <em>do not</em> contain a new line character, this is because
+Lua’s normal methods for reading IO, will omit a trailing new line. For example <code class="docutils literal notranslate"><span class="pre">io.open('README.md'):read('*l')</span></code>
+returns <code class="docutils literal notranslate"><span class="pre">'#</span> <span class="pre">Luncheon'</span></code> with no trailing new line.</p>
+<p>To handle some common use cases, the <code class="docutils literal notranslate"><span class="pre">utils</span></code> module provides a source wrapper around luasocket’s tcp and udp sockets.</p>
+</div>
+<div class="section" id="building">
+<h3>Building<a class="headerlink" href="#building" title="Permalink to this headline">¶</a></h3>
+<p>Both <code class="docutils literal notranslate"><span class="pre">Request</span></code> and <code class="docutils literal notranslate"><span class="pre">Response</span></code> expose a constructor <code class="docutils literal notranslate"><span class="pre">new</span></code> along
+with the <code class="docutils literal notranslate"><span class="pre">serialize</span></code> and <code class="docutils literal notranslate"><span class="pre">as_source</span></code> methods
+for building them and then converting them into “hypertext”.</p>
+<div class="highlight-lua notranslate"><div class="highlight"><pre><span></span><span class="kd">local</span> <span class="n">Request</span> <span class="o">=</span> <span class="nb">require</span> <span class="s1">&#39;luncheon.request&#39;</span>
+<span class="kd">local</span> <span class="n">req</span> <span class="o">=</span> <span class="n">Request</span><span class="p">.</span><span class="n">new</span><span class="p">(</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;/&#39;</span><span class="p">)</span>
+  <span class="p">:</span><span class="n">add_header</span><span class="p">(</span><span class="s1">&#39;Host&#39;</span><span class="p">,</span> <span class="s1">&#39;example.com&#39;</span><span class="p">)</span>
+  <span class="p">:</span><span class="n">append_body</span><span class="p">(</span><span class="s1">&#39;I am a request body&#39;</span><span class="p">)</span>
+<span class="kr">for</span> <span class="n">line</span> <span class="kr">in</span> <span class="n">req</span><span class="p">:</span><span class="n">as_source</span><span class="p">()</span>
+  <span class="nb">print</span><span class="p">(</span><span class="nb">string.gsub</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\r</span><span class="s1">?</span><span class="se">\n</span><span class="s1">$&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+<span class="kr">end</span>
+<span class="kd">local</span> <span class="n">Response</span> <span class="o">=</span> <span class="nb">require</span> <span class="s1">&#39;luncheon.response&#39;</span>
+<span class="kd">local</span> <span class="n">res</span> <span class="o">=</span> <span class="n">Response</span><span class="p">.</span><span class="n">new</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
+  <span class="p">:</span><span class="n">add_header</span><span class="p">(</span><span class="s1">&#39;age&#39;</span><span class="p">,</span> <span class="s1">&#39;2000&#39;</span><span class="p">)</span>
+  <span class="p">:</span><span class="n">append_body</span><span class="p">(</span><span class="s1">&#39;I am a response body&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">res</span><span class="p">:</span><span class="n">serialize</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>Notice how the <code class="docutils literal notranslate"><span class="pre">req:as_source()</span></code> loop has to remove new lines
+before printing. That means we already get the <code class="docutils literal notranslate"><span class="pre">CRLF</span></code> line endings
+required for the start line and headers.</p>
+</div>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="basic-echo-server">
+<h3>Basic echo server<a class="headerlink" href="#basic-echo-server" title="Permalink to this headline">¶</a></h3>
+<p>This example uses <a class="reference external" href="https://w3.impa.br/~diego/software/luasocket/home.html">luasocket</a> to receive incoming HTTP
+<code class="docutils literal notranslate"><span class="pre">Request</span></code>s and echo them back out as <code class="docutils literal notranslate"><span class="pre">Response</span></code>s.</p>
+<div class="highlight-lua notranslate"><div class="highlight"><pre><span></span><span class="n">Request</span> <span class="o">=</span> <span class="nb">require</span> <span class="s1">&#39;luncheon.request&#39;</span>
+<span class="n">Response</span> <span class="o">=</span> <span class="nb">require</span> <span class="s1">&#39;luncheon.response&#39;</span>
+<span class="n">utils</span> <span class="o">=</span> <span class="nb">require</span> <span class="s1">&#39;luncheon.utils&#39;</span>
+<span class="n">socket</span> <span class="o">=</span> <span class="nb">require</span> <span class="s1">&#39;socket&#39;</span> <span class="c1">--luasocket</span>
+<span class="n">tcp</span> <span class="o">=</span> <span class="nb">assert</span><span class="p">(</span><span class="n">socket</span><span class="p">.</span><span class="n">tcp</span><span class="p">())</span>
+<span class="nb">assert</span><span class="p">(</span><span class="n">tcp</span><span class="p">:</span><span class="n">bind</span><span class="p">(</span><span class="s1">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="mi">8080</span><span class="p">))</span>
+<span class="nb">assert</span><span class="p">(</span><span class="n">tcp</span><span class="p">:</span><span class="n">listen</span><span class="p">())</span>
+<span class="kr">while</span> <span class="kc">true</span> <span class="kr">do</span>
+  <span class="kd">local</span> <span class="n">incoming</span> <span class="o">=</span> <span class="nb">assert</span><span class="p">(</span><span class="n">tcp</span><span class="p">:</span><span class="n">accept</span><span class="p">())</span>
+  <span class="kd">local</span> <span class="n">source</span> <span class="o">=</span> <span class="n">utils</span><span class="p">.</span><span class="n">tcp_socket_source</span><span class="p">(</span><span class="n">incoming</span><span class="p">)</span>
+  <span class="kd">local</span> <span class="n">req</span> <span class="o">=</span> <span class="nb">assert</span><span class="p">(</span><span class="n">Request</span><span class="p">.</span><span class="n">source</span><span class="p">(</span><span class="n">source</span><span class="p">))</span>
+  <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Request&#39;</span><span class="p">)</span>
+  <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;url&#39;</span><span class="p">,</span> <span class="n">req</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">path</span><span class="p">)</span>
+  <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="n">req</span><span class="p">.</span><span class="n">method</span><span class="p">)</span>
+  <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;body&#39;</span><span class="p">,</span> <span class="n">req</span><span class="p">:</span><span class="n">get_body</span><span class="p">())</span>
+  <span class="kd">local</span> <span class="n">res</span> <span class="o">=</span> <span class="n">Response</span><span class="p">.</span><span class="n">new</span><span class="p">()</span>
+    <span class="p">:</span><span class="n">add_header</span><span class="p">(</span><span class="s1">&#39;Server&#39;</span><span class="p">,</span> <span class="s1">&#39;Luncheon Echo Server&#39;</span><span class="p">)</span>
+    <span class="p">:</span><span class="n">append_body</span><span class="p">(</span><span class="n">req</span><span class="p">:</span><span class="n">get_body</span><span class="p">())</span>
+  <span class="kr">for</span> <span class="n">chunk</span> <span class="kr">in</span> <span class="n">res</span><span class="p">:</span><span class="n">as_source</span><span class="p">()</span> <span class="kr">do</span>
+    <span class="nb">assert</span><span class="p">(</span><span class="n">utils</span><span class="p">.</span><span class="n">send_all</span><span class="p">(</span><span class="n">incoming</span><span class="p">,</span> <span class="n">chunk</span><span class="p">))</span>
+  <span class="kr">end</span>
+  <span class="n">incoming</span><span class="p">:</span><span class="n">close</span><span class="p">()</span>
+<span class="kr">end</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="request.html" class="btn btn-neutral float-right" title="Request" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Robert Masen.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

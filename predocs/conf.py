@@ -32,6 +32,7 @@ extensions = [
     'sphinx_lua',
     'sphinx_rtd_theme',
     'm2r2',
+    'sphinx.ext.autosectionlabel'
 ]
 
 # List of patterns, relative to source directory, that match files and
