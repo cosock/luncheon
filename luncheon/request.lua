@@ -7,15 +7,14 @@ local utils = require 'luncheon.utils'
 ---An HTTP Request
 ---
 ---@field public method string the HTTP method for this request
----@field public url table The parse url of this request
----@field public http_version string The http version from the request preamble
+---@field public url table The parsed url of this request
+---@field public http_version string The http version from the request first line
 ---@field public headers Headers The HTTP headers for this request
----@field public body string The contents of the request
+---@field public body string The contents of the request's body
 ---@field private _source fun():string ltn12 source
 ---@field private _parsed_headers boolean
 ---@field private _headers Headers
 ---@field private _received_body boolean
----@field private _body string|nil
 local Request = {}
 Request.__index = Request
 
@@ -33,7 +32,7 @@ function Request._parse_preamble(line)
         method = method,
         url = net_url.parse(path),
         http_version = http_version,
-        _body = nil,
+        body = nil,
         _headers = nil,
     }
 end
@@ -131,7 +130,7 @@ function Request:get_body()
             return nil, err
         end
     end
-    return self._body
+    return self.body
 end
 
 ---Read from the socket, filling the body property
@@ -142,7 +141,7 @@ function Request:_fill_body()
     if err ~= nil then
         return err
     end
-    self._body = self._source(len or 0)
+    self.body = self._source(len or 0)
     self._received_body = true
 end
 

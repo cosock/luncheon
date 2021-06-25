@@ -68,7 +68,7 @@ describe('Request', function()
             assert(e == nil, 'error parsing preamble ' .. (e or 'nil'))
             local e2 = r:_fill_body()
             assert(e2 == nil, 'error parsing body: ' .. (e2 or 'nil'))
-            assert(r._body == 'asdfg', 'Expected asdfg, found ' .. (r._body or 'nil'))
+            assert(r.body == 'asdfg', 'Expected asdfg, found ' .. (r._body or 'nil'))
         end)
         it('get_body', function()
             local lines = {
