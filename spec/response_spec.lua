@@ -136,7 +136,7 @@ describe('Response', function()
         local headers = assert(r:get_headers())
         assert.are.equal('1', headers.content_length)
     end)
-    it('Response error socket', function ()
+    it('Response error socket #junk', function ()
         local r = assert(Response.source(utils.tcp_socket_source(MockSocket.new({
             'HTTP/1.1 200 OK\r\n',
             'Content-Length: 10\r\n',

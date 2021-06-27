@@ -274,9 +274,6 @@ function Request:as_source()
         end
         if state == 'headers' then
             last_header, value = next(self.headers, last_header)
-            if last_header == '_last_key' then
-                last_header, value = next(self.headers, last_header)
-            end
             if not last_header then
                 state = 'body'
                 return '\r\n'

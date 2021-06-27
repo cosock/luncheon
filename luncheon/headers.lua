@@ -1,4 +1,5 @@
-
+local LAST_KEY = '@LASTKEY'
+local LAST_KEY_GETTER = '@LASTKEYGETTER'
 ---@class Headers
 ---
 ---A map of the key value pairs from the header portion
@@ -99,9 +100,7 @@ end
 function Headers:serialize()
     local ret = ''
     for key, value in pairs(self) do
-        if key ~= '_last_key' then 
-            ret = ret .. Headers.serialize_header(key, value) .. '\r\n'
-        end
+        ret = ret .. Headers.serialize_header(key, value) .. '\r\n'
     end
     return ret
 end
@@ -113,7 +112,7 @@ function Headers:append_chunk(text)
         return nil, 'nil header'
     end
     if string.match(text, '^%s+') ~= nil then
-        local last_key = rawget(self, '_last_key')
+        local last_key = self[LAST_KEY_GETTER]()
         if not last_key then
             return nil, 'Header continuation with no key'
         end
@@ -139,10 +138,31 @@ end
 ---Bare constructor
 ---@param base table|nil
 function Headers.new(base)
-    local ret = base or {
-        last_key = nil,
+    local proxy = {
+        [LAST_KEY] = nil,
     }
-    setmetatable(ret, Headers)
+    local last_key_getter = function ()
+       return proxy[LAST_KEY]
+    end
+
+    local ret = base or {}
+    setmetatable(ret, {
+        __index = function (t, k)
+            if k ~= LAST_KEY then
+                if k == LAST_KEY_GETTER then
+                    return last_key_getter
+                end
+                return Headers[k]
+            end
+        end,
+        __newindex = function(t, k, v)
+            if k == LAST_KEY then
+                proxy[LAST_KEY] = v
+                return
+            end
+            rawset(t, k, v)
+        end,
+    })
     return ret
 end
 
@@ -163,7 +183,7 @@ end
 function Headers:append(key, value)
     key = Headers.normalize_key(key)
     _append(self, key, value)
-    rawset(self, '_last_key', key)
+    self[LAST_KEY] = key
     return self
 end
 
