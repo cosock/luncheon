@@ -153,10 +153,11 @@ function Request:content_length()
     if not headers then
         return nil, err
     end
-    if headers.content_length == nil then
+    local cl = headers:get_one('content_length')
+    if cl == nil then
         return nil
     end
-    local n = math.tointeger(headers.content_length)
+    local n = math.tointeger(cl)
     if not n then
         return nil, 'Invalid content length'
     end
@@ -209,12 +210,7 @@ end
 ---@param len number The Expected length of the body
 ---@return Request
 function Request:set_content_length(len)
-    len = tostring(len)
-    if self.headers.content_length == nil then
-        self:add_header('content_length', len)
-        return self
-    end
-    self.headers.content_length = len
+    self:add_header('content_length', len)
     return self
 end
 
@@ -273,7 +269,7 @@ function Request:as_source()
             return pre .. '\r\n'
         end
         if state == 'headers' then
-            last_header, value = next(self.headers, last_header)
+            last_header, value = next(self.headers._inner, last_header)
             if not last_header then
                 state = 'body'
                 return '\r\n'

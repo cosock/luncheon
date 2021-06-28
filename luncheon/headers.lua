@@ -1,5 +1,3 @@
-local LAST_KEY = '@LASTKEY'
-local LAST_KEY_GETTER = '@LASTKEYGETTER'
 ---@class Headers
 ---
 ---A map of the key value pairs from the header portion
@@ -63,6 +61,7 @@ local Headers = {}
 Headers.__index = Headers
 
 local function _append(t, key, value)
+    value = tostring(value)
     if not t[key] then
         t[key] = value
     elseif type(t[key]) == 'string' then
@@ -99,8 +98,8 @@ end
 ---@return string
 function Headers:serialize()
     local ret = ''
-    for key, value in pairs(self) do
-        ret = ret .. Headers.serialize_header(key, value) .. '\r\n'
+    for header in self:iter() do
+        ret = ret .. header .. '\r\n'
     end
     return ret
 end
@@ -112,12 +111,11 @@ function Headers:append_chunk(text)
         return nil, 'nil header'
     end
     if string.match(text, '^%s+') ~= nil then
-        local last_key = self[LAST_KEY_GETTER]()
-        if not last_key then
+        if not self._last_key then
             return nil, 'Header continuation with no key'
         end
-        local existing = self[last_key]
-        self[last_key] = string.format('%s %s', existing, text)
+        local existing = self:get_one(self._last_key)
+        self._inner[self._last_key] = string.format('%s %s', existing, text)
         return 1
     end
     for raw_key, value in string.gmatch(text, '([^%c()<>@,;:\\"/%[%]?={} \t]+): (.+);?') do
@@ -136,33 +134,12 @@ function Headers.from_chunk(text)
 end
 
 ---Bare constructor
----@param base table|nil
-function Headers.new(base)
-    local proxy = {
-        [LAST_KEY] = nil,
+function Headers.new()
+    local ret = {
+        _inner = {},
+        last_key = nil,
     }
-    local last_key_getter = function ()
-       return proxy[LAST_KEY]
-    end
-
-    local ret = base or {}
-    setmetatable(ret, {
-        __index = function (t, k)
-            if k ~= LAST_KEY then
-                if k == LAST_KEY_GETTER then
-                    return last_key_getter
-                end
-                return Headers[k]
-            end
-        end,
-        __newindex = function(t, k, v)
-            if k == LAST_KEY then
-                proxy[LAST_KEY] = v
-                return
-            end
-            rawset(t, k, v)
-        end,
-    })
+    setmetatable(ret, Headers)
     return ret
 end
 
@@ -178,12 +155,12 @@ end
 
 ---Insert a single key value pair to the collection
 ---@param key string
----@param value string|string[]
+---@param value string
 ---@return Headers
 function Headers:append(key, value)
     key = Headers.normalize_key(key)
-    _append(self, key, value)
-    self[LAST_KEY] = key
+    _append(self._inner, key, value)
+    self._last_key = key
     return self
 end
 
@@ -197,7 +174,7 @@ end
 ---@return string
 function Headers:get_one(key)
     local k = Headers.normalize_key(key or '')
-    local value = self[k]
+    local value = self._inner[k]
     if type(value) == 'table' then
         return value[#value]
     else
@@ -205,7 +182,11 @@ function Headers:get_one(key)
     end
 end
 
----Get a header from the map of headers as a list of strings
+---Get a header from the map of headers as a list of strings.
+---In the event that a header's key is duplicated, the value
+---is stored internally as a list of values. This method is
+---useful for getting that list.
+---
 ---
 ---This will first normalize the provided key. For example
 ---'Content-Type' will be normalized to `content_type`.
@@ -213,11 +194,23 @@ end
 ---@return string[]
 function Headers:get_all(key)
     local k = Headers.normalize_key(key or '')
-    local values = self[k]
+    local values = self._inner[k]
     if type(values) == 'string' then
         return {values}
     end
     return values
+end
+
+function Headers:iter()
+    local last = nil
+    return function (key)
+        local k, v = next(self._inner, last)
+        last = k
+        if not k then
+            return
+        end
+        return Headers.serialize_header(k, v)
+    end
 end
 
 return Headers

@@ -107,13 +107,14 @@ end
 ---@return string|nil @when not `nil` the error message
 function Response:get_content_length()
     if not self._parsed_headers then
-        self:_fill_headers() 
+        self:_fill_headers()
     end
     if not self._content_length then
-        if not self.headers.content_length then
+        local cl = self.headers:get_one('content_length')
+        if not cl then
             return
         end 
-        local n = math.tointeger(self.headers.content_length)
+        local n = math.tointeger(cl)
         if not n then
             return nil, 'bad Content-Length header'
         end
@@ -179,7 +180,7 @@ function Response.new(status_code)
     if ({string = true, number = true})[type(status_code)] then
         status_code = math.tointeger(status_code)
     else
-        error(string.format('Invalid status code %q', status_code))
+        return nil, string.format('Invalid status code %s', type(status_code))
     end
     
     return setmetatable(
@@ -285,7 +286,7 @@ function Response:as_source()
             return self:_generate_preamble() .. suffix
         end
         if state == 'headers' then
-            last_header, value = next(self.headers, last_header)
+            last_header, value = next(self.headers._inner, last_header)
             if not last_header then
                 state = 'body'
                 return suffix

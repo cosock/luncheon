@@ -44,7 +44,7 @@ describe('Request', function()
             for _, set in ipairs(normal_headers) do
                 local key = set[2]
                 local expected = set[3]
-                assert(headers[key] == expected, string.format('%s, found %s expected %s', key, headers[key], expected))
+                assert(headers:get_one(key) == expected, string.format('%s, found %s expected %s', key, headers:get_one(key), expected))
             end
         end)
         it('fails with no headers', function ()
@@ -68,7 +68,7 @@ describe('Request', function()
             assert(e == nil, 'error parsing preamble ' .. (e or 'nil'))
             local e2 = r:_fill_body()
             assert(e2 == nil, 'error parsing body: ' .. (e2 or 'nil'))
-            assert(r.body == 'asdfg', 'Expected asdfg, found ' .. (r._body or 'nil'))
+            assert.are.equal('asdfg', r.body)
         end)
         it('get_body', function()
             local lines = {

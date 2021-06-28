@@ -453,17 +453,6 @@ for any header, it will be a table of strings.</p>
 </dd></dl>
 
 <dl class="lua staticmethod">
-<dt id="Headers.new">
-<em class="property">static </em><code class="sig-name descname">new</code><span class="sig-paren">(</span><em class="sig-param">base</em><span class="sig-paren">)</span><a class="headerlink" href="#Headers.new" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bare constructor</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>base</strong> (<em>table or nil</em>) – </p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="lua staticmethod">
 <dt id="Headers.normalize_key">
 <em class="property">static </em><code class="sig-name descname">normalize_key</code><span class="sig-paren">(</span><em class="sig-param">key</em><span class="sig-paren">)</span><a class="headerlink" href="#Headers.normalize_key" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert a standard header key to the normalized</p>
@@ -486,7 +475,7 @@ for any header, it will be a table of strings.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>key</strong> (<em>str</em>) – </p></li>
-<li><p><strong>value</strong> (<em>str or list[str]</em>) – </p></li>
+<li><p><strong>value</strong> (<em>str</em>) – </p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type</dt>
@@ -516,7 +505,10 @@ last value will be provided</p>
 <dl class="lua method">
 <dt id="Headers.get_all">
 <em class="property"> </em><code class="sig-name descname">get_all</code><span class="sig-paren">(</span><em class="sig-param">key</em><span class="sig-paren">)</span><a class="headerlink" href="#Headers.get_all" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get a header from the map of headers as a list of strings</p>
+<dd><p>Get a header from the map of headers as a list of strings.</p>
+<p>In the event that a header’s key is duplicated, the value
+is stored internally as a list of values. This method is
+useful for getting that list.</p>
 <p>This will first normalize the provided key. For example
 ‘Content-Type’ will be normalized to <cite>content_type</cite>.</p>
 <dl class="field-list simple">
@@ -528,6 +520,11 @@ last value will be provided</p>
 </dd>
 </dl>
 </dd></dl>
+
+<dl class="lua method">
+<dt id="Headers.iter">
+<em class="property"> </em><code class="sig-name descname">iter</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Headers.iter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
