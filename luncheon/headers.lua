@@ -10,52 +10,8 @@
 ---Typically each header's value will be a string, however if there are multiple entries
 ---for any header, it will be a table of strings.
 ---
----@field public accept string
----@field public accept_charset string
----@field public accept_encoding string
----@field public accept_language string
----@field public accept_ranges string
----@field public age string
----@field public allow string
----@field public authorization string
----@field public cache_control string
----@field public connection string
----@field public content_encoding string
----@field public content_language string
----@field public content_length string
----@field public content_location string
----@field public content_md5 string
----@field public content_range string
----@field public content_type string
----@field public date string
----@field public etag string
----@field public expect string
----@field public expires string
----@field public from string
----@field public host string
----@field public if_match string
----@field public if_modified_since string
----@field public if_none_match string
----@field public if_range string
----@field public if_unmodified_since string
----@field public last_modified string
----@field public location string
----@field public max_forwards string
----@field public pragma string
----@field public proxy_authenticate string
----@field public proxy_authorization string
----@field public range string
----@field public referer string
----@field public retry_after string
----@field public server string
----@field public te string
----@field public trailer string
----@field public upgrade string
----@field public user_agent string
----@field public vary string
----@field public via string
----@field public warning string
----@field public www_authenticate string
+---@field private _inner table A table containing the deserialized header key/value pairs
+---@field private _last_key string The last key deserialized, for multiline headers
 local Headers = {}
 
 Headers.__index = Headers
