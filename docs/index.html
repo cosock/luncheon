@@ -162,6 +162,13 @@
 <h1>Luncheon<a class="headerlink" href="#luncheon" title="Permalink to this headline">¶</a></h1>
 <p>HTTP types for Lua</p>
 <a class="reference external image-reference" href="./Luncheon.svg"><img alt="Luncheon Logo" src="./Luncheon.svg" /></a>
+<div class="section" id="install">
+<h2>Install<a class="headerlink" href="#install" title="Permalink to this headline">¶</a></h2>
+<p>This library is published on <a class="reference external" href="https://luarocks.org/modules/FreeMasen/luncheon">luarocks</a></p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>luarocks install luncheon
+</pre></div>
+</div>
+</div>
 <div class="section" id="usage">
 <h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
 <p>Luncheon provides Lua tables that represent HTTP <code class="docutils literal notranslate"><span class="pre">Request</span></code>s and <code class="docutils literal notranslate"><span class="pre">Response</span></code>s and
@@ -183,7 +190,7 @@ might look like this.</p>
 <span class="nb">assert</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;GET&#39;</span><span class="p">)</span>
 <span class="nb">assert</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">path</span> <span class="o">==</span> <span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="nb">assert</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">http_version</span> <span class="o">==</span> <span class="mf">1.1</span><span class="p">)</span>
-<span class="nb">assert</span><span class="p">(</span><span class="n">req</span><span class="p">:</span><span class="n">get_headers</span><span class="p">().</span><span class="n">content_length</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+<span class="nb">assert</span><span class="p">(</span><span class="n">req</span><span class="p">:</span><span class="n">get_headers</span><span class="p">():</span><span class="n">get_one</span><span class="p">(</span><span class="s1">&#39;content_length&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
 
 <span class="kd">local</span> <span class="n">Response</span> <span class="o">=</span> <span class="s1">&#39;luncheon.response&#39;</span>
 <span class="kd">local</span> <span class="n">res_lines</span> <span class="o">=</span> <span class="p">{</span>
@@ -197,7 +204,7 @@ might look like this.</p>
 <span class="nb">assert</span><span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">200</span><span class="p">)</span>
 <span class="nb">assert</span><span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="n">status_msg</span> <span class="o">==</span> <span class="s1">&#39;Ok&#39;</span><span class="p">)</span>
 <span class="nb">assert</span><span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="n">http_version</span> <span class="o">==</span> <span class="mf">1.1</span><span class="p">)</span>
-<span class="nb">assert</span><span class="p">(</span><span class="n">res</span><span class="p">:</span><span class="n">get_headers</span><span class="p">().</span><span class="n">content_length</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+<span class="nb">assert</span><span class="p">(</span><span class="n">res</span><span class="p">:</span><span class="n">get_headers</span><span class="p">():</span><span class="n">get_one</span><span class="p">(</span><span class="s1">&#39;content_length&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Notice how in both of the above examples, the lines <em>do not</em> contain a new line character, this is because
@@ -229,12 +236,12 @@ before printing. That means we already get the <code class="docutils literal not
 required for the start line and headers.</p>
 </div>
 </div>
-<div class="section" id="example">
-<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="basic-echo-server">
 <h3>Basic echo server<a class="headerlink" href="#basic-echo-server" title="Permalink to this headline">¶</a></h3>
-<p>This example uses <a class="reference external" href="https://w3.impa.br/~diego/software/luasocket/home.html">luasocket</a> to receive incoming HTTP
-<code class="docutils literal notranslate"><span class="pre">Request</span></code>s and echo them back out as <code class="docutils literal notranslate"><span class="pre">Response</span></code>s.</p>
+<p>This example uses <a class="reference external" href="https://w3.impa.br/~diego/software/luasocket/home.html">luasocket</a>
+to receive incoming HTTP <code class="docutils literal notranslate"><span class="pre">Request</span></code>s and echo them back out as <code class="docutils literal notranslate"><span class="pre">Response</span></code>s.</p>
 <div class="highlight-lua notranslate"><div class="highlight"><pre><span></span><span class="n">Request</span> <span class="o">=</span> <span class="nb">require</span> <span class="s1">&#39;luncheon.request&#39;</span>
 <span class="n">Response</span> <span class="o">=</span> <span class="nb">require</span> <span class="s1">&#39;luncheon.response&#39;</span>
 <span class="n">utils</span> <span class="o">=</span> <span class="nb">require</span> <span class="s1">&#39;luncheon.utils&#39;</span>
@@ -260,6 +267,7 @@ required for the start line and headers.</p>
 <span class="kr">end</span>
 </pre></div>
 </div>
+<p>See the <a class="reference external" href="/examples">examples</a> directory for more</p>
 </div>
 </div>
 </div>

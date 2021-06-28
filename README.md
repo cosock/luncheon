@@ -4,6 +4,14 @@ HTTP types for Lua
 
 ![Luncheon Logo](./Luncheon.svg)
 
+## Install
+
+This library is published on [luarocks](https://luarocks.org/modules/FreeMasen/luncheon)
+
+```sh
+luarocks install luncheon
+```
+
 ## Usage
 
 Luncheon provides Lua tables that represent HTTP `Request`s and `Response`s and
@@ -28,7 +36,7 @@ end)
 assert(req.method == 'GET')
 assert(req.url.path == '/')
 assert(req.http_version == 1.1)
-assert(req:get_headers().content_length == 0)
+assert(req:get_headers():get_one('content_length') == 0)
 
 local Response = 'luncheon.response'
 local res_lines = {
@@ -42,7 +50,7 @@ end)
 assert(res.status == 200)
 assert(res.status_msg == 'Ok')
 assert(res.http_version == 1.1)
-assert(res:get_headers().content_length == 0)
+assert(res:get_headers():get_one('content_length') == 0)
 ```
 
 Notice how in both of the above examples, the lines _do not_ contain a new line character, this is because
@@ -76,12 +84,13 @@ Notice how the `req:as_source()` loop has to remove new lines
 before printing. That means we already get the `CRLF` line endings
 required for the start line and headers.
 
-## Example
+## Examples
 
 ### Basic echo server
 
-This example uses [luasocket](https://w3.impa.br/~diego/software/luasocket/home.html) to receive incoming HTTP 
-`Request`s and echo them back out as `Response`s.
+This example uses [luasocket](https://w3.impa.br/~diego/software/luasocket/home.html)
+to receive incoming HTTP `Request`s and echo them back out as `Response`s.
+
 
 ```lua
 Request = require 'luncheon.request'
@@ -108,3 +117,5 @@ while true do
   incoming:close()
 end
 ```
+
+See the [examples](/examples) directory for more
