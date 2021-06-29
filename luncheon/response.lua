@@ -44,6 +44,20 @@ function Response.source(source)
     return ret
 end
 
+function Response.tcp_source(socket)
+    local utils = require 'luncheon.utils'
+    return Response.source(
+        utils.tcp_socket_source(socket)
+    )
+end
+
+function Response.udp_source(socket)
+    local utils = require 'luncheon.utils'
+    return Response.source(
+        utils.udp_socket_source(socket)
+    )
+end
+
 ---Parse the first line of an incoming response
 ---@param line string
 ---@return nil|table @`{http_version: number, status: number, status_msg: string}`
@@ -173,7 +187,10 @@ end
 
 --#region builder
 
-function Response.new(status_code)
+---
+---@param status_code number
+---@param sink fun(chunk:string)
+function Response.new(status_code, sink)
     if status_code == nil then
         status_code = 200
     end
@@ -182,7 +199,7 @@ function Response.new(status_code)
     else
         return nil, string.format('Invalid status code %s', type(status_code))
     end
-    
+
     return setmetatable(
         {
             status = status_code or 200,
@@ -191,6 +208,7 @@ function Response.new(status_code)
             headers = Headers.new(),
             body = '',
             _parsed_headers = true,
+            _sink = sink,
         },
         Response
     )

@@ -13,8 +13,8 @@ while true do
     print('error', err)
     break
   end
-  local req = lunch.Request.source(
-    lunch.utils.tcp_socket_source(incoming)
+  local req = lunch.Request.tcp_source(
+    incoming
   )
   print('into request')
   print('url', req.url.path)

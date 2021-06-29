@@ -50,7 +50,7 @@ for line in r:as_source() do
   sock:send(line)
 end
 
-local res = assert(lunch.Response.source(lunch.utils.tcp_socket_source(sock)))
+local res = assert(lunch.Response.tcp_source(sock))
 
 print('Response')
 print(res.status)

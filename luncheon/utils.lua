@@ -27,6 +27,9 @@ function m.send_all(sock, s)
                     return nil, 'Attempt to send on closed socket'
                 elseif err == 'timeout' then
                     retries = retries + 1
+                    if retries == 5 then
+                        return nil, err
+                    end
                 else
                     return nil, err, total_sent
                 end
@@ -36,6 +39,32 @@ function m.send_all(sock, s)
         end
     end
     return total_sent
+end
+
+function m.buffered_socket_sink(socket, size)
+    local buffer = ''
+    return function(bytes)
+        if bytes == nil then
+            if #buffer == 0 then
+                return 1
+            end
+            local s, e = m.send_all(socket, buffer)
+            if not s then
+                return nil, e
+            end
+            buffer = ''
+            return 1
+        end
+        buffer = buffer .. bytes
+        while #buffer >= size do
+            local s, e = m.send_all(socket, buffer:sub(1, size))
+            if not s then
+                return nil, e
+            end
+            buffer = buffer:sub(size+1)
+        end
+        return 1
+    end
 end
 
 ---Use a luasocket api conforming table as a source via the ltn12 api
