@@ -235,6 +235,34 @@ describe('Request', function()
             assert.is.falsy(s)
             assert.are.equal('error', e)
         end)
+        it('send_header forwards errors', function()
+            local ct = 0
+            local r = Request.new('GET', '/', function()
+                if ct == 0 then
+                    ct = ct + 1
+                    return 1
+                end
+                return nil, 'error'
+            end)
+            assert(r:send_preamble())
+            local s, e = r:send_header()
+            assert.is.falsy(s)
+            assert.are.equal('error', e)
+        end)
+        it('send_header forwards errors deeper', function()
+            local ct = 0
+            local r = Request.new('GET', '/', function()
+                if ct == 0 then
+                    ct = ct + 1
+                    return 1
+                end
+                return nil, 'error'
+            end):add_header('X-A-Header', 'yes')
+            assert(r:send_preamble())
+            local s, e = r:send_header()
+            assert.is.falsy(s)
+            assert.are.equal('error', e)
+        end)
         it('cannot send headers after body', function()
             local sent = {}
             local r = Request.new('GET', '/', ltn12.sink.table(sent))
@@ -242,6 +270,18 @@ describe('Request', function()
             local s, e = r:send_header()
             assert.is.falsy(s)
             assert.are.equal('cannot send headers after body', e)
+        end)
+        it('send forwards errors', function()
+            local ct = 0
+            local s, e = Request.new('GET', '/', function()
+                if ct < 3 then
+                    ct = ct + 1
+                    return 1
+                end
+                return nil, 'error'
+            end):send('asdf')
+            assert.is.falsy(s)
+            assert.are.equal('error', e)
         end)
     end)
 end)

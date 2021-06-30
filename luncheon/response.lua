@@ -209,6 +209,9 @@ function Response.new(status_code, sink)
             body = '',
             _parsed_headers = true,
             _sink = sink,
+            _send_state = {
+                stage = 'none',
+            },
         },
         Response
     )
@@ -320,6 +323,96 @@ function Response:as_source()
             return value
         end
     end
+end
+
+--#endregion
+
+--#region sink
+
+---Serialize and pass the first line of this Request into the sink
+---@return integer if not nil, success
+---@return string if not nil and error message
+function Response:send_preamble()
+    if self._send_state.stage ~= 'none' then
+        return 1 --already sent
+    end
+    local line = self:_generate_preamble() .. '\r\n'
+    local s, err = self._sink(line)
+    if not s then
+        return nil, err
+    end
+    self._send_state.stage = 'header'
+    return 1
+end
+
+---Pass a single header line into the sink functions
+---@return integer|nil If not nil, then successfully "sent"
+---@return string If not nil, the error message
+function Response:send_header()
+    if self._send_state.stage == 'none' then
+        return self:send_preamble()
+    end
+    if self._send_state.stage == 'body' then
+        return nil, 'cannot send headers after body'
+    end
+    local key, value = next(self.headers._inner, self._send_state.last_header)
+    if not key then
+        local s, e = self._sink('\r\n')
+        if not s then
+            return nil, e
+        end
+        self._send_state = {
+            stage = 'body',
+            sent = 0,
+        }
+        return 1
+    end
+    local line = Headers.serialize_header(key, value) .. '\r\n'
+    local s, e = self._sink(line)
+    if not s then
+        return nil, e
+    end
+    self._send_state.last_header = key
+    return 1
+end
+
+---Slice a chunk of at most 1024 bytes from `self.body` and pass it to
+---the sink
+---@return integer|nil if not nil, success
+---@return string if not nil and error message
+function Response:send_body_chunk()
+    if self._send_state.stage ~= 'body' then
+        return self:send_header()
+    end
+    local start_idx = self._send_state.sent + 1
+    local end_idx = start_idx + 1024
+    local chunk = self.body:sub(start_idx, end_idx)
+    local s, e = self._sink(chunk)
+    if not s then
+        return nil, e
+    end
+    self._send_state.sent = self._send_state.sent + #chunk
+    return 1
+end
+
+---Serialize and pass the request chunks into the sink
+---@param bytes string|nil the final bytes to append to the body
+---@return integer|nil If not nil sent successfully
+---@return string if not nil the error message
+function Response:send(bytes)
+    if bytes then
+        self.body = self.body .. bytes
+    end
+    if not self._send_state.stage ~= 'body' then
+        self:set_content_length(#self.body)
+    end
+    while (self._send_state.sent or 0) < #self.body do
+        local s, e = self:send_body_chunk()
+        if not s then
+            return nil, e
+        end
+    end
+    return 1
 end
 
 --#endregion

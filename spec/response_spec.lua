@@ -193,4 +193,93 @@ describe('Response', function()
             ct = ct + 1
         end
     end)
+    describe('sink', function()
+        local ltn12 = require 'ltn12'
+        it('can send', function()
+            local sent = {}
+            local r = Response.new(200, ltn12.sink.table(sent))
+            r:send('body')
+            assert.are.equal('HTTP/1.1 200 OK\r\n', sent[1])
+            assert.are.equal('Content-Length: 4\r\n', sent[2])
+            assert.are.equal('\r\n', sent[3])
+            assert.are.equal('body', sent[4])
+        end)
+        it('does not duplicate preamble', function()
+            local sent = {}
+            local r = Response.new(200, ltn12.sink.table(sent))
+            r:send_preamble()
+            r:send_preamble()
+            assert.are.equal('HTTP/1.1 200 OK\r\n', sent[1])
+            assert.are.equal(1, #sent)
+        end)
+        it('send_preamble forwards errors', function()
+            local r = Response.new(200, function() return nil, 'error' end)
+            local s, e = r:send_preamble()
+            assert.is.falsy(s)
+            assert.are.equal('error', e)
+        end)
+        it('send_header forwards errors', function()
+            local ct = 0
+            local r = Response.new(200, function()
+                if ct == 0 then
+                    ct = ct + 1
+                    return 1
+                end
+                return nil, 'error'
+            end)
+            assert(r:send_preamble())
+            local s, e = r:send_header()
+            assert.is.falsy(s)
+            assert.are.equal('error', e)
+        end)
+        it('send_header forwards errors deeper', function()
+            local ct = 0
+            local r = Response.new(200, function()
+                if ct == 0 then
+                    ct = ct + 1
+                    return 1
+                end
+                return nil, 'error'
+            end):add_header('X-A-Header', 'yes')
+            assert(r:send_preamble())
+            local s, e = r:send_header()
+            assert.is.falsy(s)
+            assert.are.equal('error', e)
+        end)
+        it('cannot send headers after body', function()
+            local sent = {}
+            local r = Response.new(200, ltn12.sink.table(sent))
+            assert(r:send('asdf'))
+            local s, e = r:send_header()
+            assert.is.falsy(s)
+            assert.are.equal('cannot send headers after body', e)
+        end)
+        it('send_body_chunk forwards errors', function()
+            local ct = 0
+            local r = Response.new(200, function()
+                if ct < 2 then
+                    ct = ct + 1
+                    return 1
+                end
+                return nil, 'error'
+            end):add_header('X-A-Header', 'yes')
+            assert(r:send_preamble())
+            assert(r:send_header())
+            local s, e = r:send_body_chunk()
+            assert.is.falsy(s)
+            assert.are.equal('error', e)
+        end)
+        it('send forwards errors #new', function()
+            local ct = 0
+            local s, e = Response.new(200, function()
+                if ct < 3 then
+                    ct = ct + 1
+                    return 1
+                end
+                return nil, 'error'
+            end):send('asdf')
+            assert.is.falsy(s)
+            assert.are.equal('error', e)
+        end)
+    end)
 end)
