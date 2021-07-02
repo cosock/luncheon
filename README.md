@@ -102,18 +102,15 @@ assert(tcp:bind('0.0.0.0', 8080))
 assert(tcp:listen())
 while true do
   local incoming = assert(tcp:accept())
-  local source = utils.tcp_socket_source(incoming)
-  local req = assert(Request.source(source))
+  local req = assert(Request.tcp_source(incoming))
   print('Request')
   print('url', req.url.path)
   print('method', req.method)
   print('body', req:get_body())
-  local res = Response.new()
+  local res = Response.new(200, utils.buffered_socket_sink(incoming))
     :add_header('Server', 'Luncheon Echo Server')
     :append_body(req:get_body())
-  for chunk in res:as_source() do
-    assert(utils.send_all(incoming, chunk))
-  end
+    :send()
   incoming:close()
 end
 ```

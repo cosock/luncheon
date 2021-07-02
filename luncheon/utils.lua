@@ -42,6 +42,7 @@ function m.send_all(sock, s)
 end
 
 function m.buffered_socket_sink(socket, size)
+    size = size or 1024
     local buffer = ''
     return function(bytes)
         if bytes == nil then

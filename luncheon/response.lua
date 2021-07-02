@@ -381,6 +381,7 @@ end
 ---@return integer|nil if not nil, success
 ---@return string if not nil and error message
 function Response:send_body_chunk()
+    print('Response:send_body_chunk')
     if self._send_state.stage ~= 'body' then
         return self:send_header()
     end
@@ -392,6 +393,7 @@ function Response:send_body_chunk()
         return nil, e
     end
     self._send_state.sent = self._send_state.sent + #chunk
+    print('sent', #chunk, self._send_state.sent)
     return 1
 end
 
@@ -412,6 +414,8 @@ function Response:send(bytes)
             return nil, e
         end
     end
+    ---one final call to the sink to clear any buffered data
+    self._sink()
     return 1
 end
 
