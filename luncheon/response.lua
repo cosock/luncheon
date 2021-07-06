@@ -10,6 +10,7 @@ local utils = require 'luncheon.utils'
 ---@field public body string the contents of the response body
 ---@field public status number The HTTP status 3 digit number
 ---@field public http_version string
+---@field public socket table The socket to send/receive on
 ---@field private _source fun(pat:string|nil):string ltn12 source
 ---@field private _parsed_headers boolean
 ---@field private _received_body boolean
@@ -44,18 +45,28 @@ function Response.source(source)
     return ret
 end
 
+---Create a response from a lua socket tcp socket
+---@param socket table tcp socket
+---@return Response
 function Response.tcp_source(socket)
     local utils = require 'luncheon.utils'
-    return Response.source(
+    local ret = Response.source(
         utils.tcp_socket_source(socket)
     )
+    ret.socket = socket
+    return ret
 end
 
+---Create a response from a lua socket udp socket
+---@param socket table udp socket
+---@return Response
 function Response.udp_source(socket)
     local utils = require 'luncheon.utils'
-    return Response.source(
+    local ret =  Response.source(
         utils.udp_socket_source(socket)
     )
+    ret.socket = socket
+    return ret
 end
 
 ---Parse the first line of an incoming response
@@ -187,10 +198,10 @@ end
 
 --#region builder
 
----
+---Create a new response for building in memory
 ---@param status_code number
----@param sink fun(chunk:string)
-function Response.new(status_code, sink)
+---@param socket table luasocket for sending
+function Response.new(status_code, socket)
     if status_code == nil then
         status_code = 200
     end
@@ -208,7 +219,7 @@ function Response.new(status_code, sink)
             headers = Headers.new(),
             body = '',
             _parsed_headers = true,
-            _sink = sink,
+            socket = socket,
             _send_state = {
                 stage = 'none',
             },
@@ -217,6 +228,13 @@ function Response.new(status_code, sink)
     )
 end
 
+---Append a header to the internal headers map
+---
+---note: this is additive, though the _last_ value is used during
+---serialization
+---@param key string
+---@param value string
+---@return Response
 function Response:add_header(key, value)
     if type(value) ~= 'string' then
         value = tostring(value)
@@ -294,9 +312,10 @@ function Response:set_status(n)
     return self
 end
 
----Creates an LTN12 source for this request
+---Creates a lua iterator returning a line (with new line characters)
+---for this Response
 ---@return function
-function Response:as_source()
+function Response:iter()
     local state = 'start'
     local last_header, value
     local suffix = '\r\n'
@@ -337,7 +356,7 @@ function Response:send_preamble()
         return 1 --already sent
     end
     local line = self:_generate_preamble() .. '\r\n'
-    local s, err = self._sink(line)
+    local s, err = utils.send_all(self.socket, line)
     if not s then
         return nil, err
     end
@@ -357,7 +376,7 @@ function Response:send_header()
     end
     local key, value = next(self.headers._inner, self._send_state.last_header)
     if not key then
-        local s, e = self._sink('\r\n')
+        local s, e = utils.send_all(self.socket, '\r\n')
         if not s then
             return nil, e
         end
@@ -368,7 +387,7 @@ function Response:send_header()
         return 1
     end
     local line = Headers.serialize_header(key, value) .. '\r\n'
-    local s, e = self._sink(line)
+    local s, e = utils.send_all(self.socket, line)
     if not s then
         return nil, e
     end
@@ -381,19 +400,17 @@ end
 ---@return integer|nil if not nil, success
 ---@return string if not nil and error message
 function Response:send_body_chunk()
-    print('Response:send_body_chunk')
     if self._send_state.stage ~= 'body' then
         return self:send_header()
     end
     local start_idx = self._send_state.sent + 1
     local end_idx = start_idx + 1024
     local chunk = self.body:sub(start_idx, end_idx)
-    local s, e = self._sink(chunk)
+    local s, e = utils.send_all(self.socket, chunk)
     if not s then
         return nil, e
     end
     self._send_state.sent = self._send_state.sent + #chunk
-    print('sent', #chunk, self._send_state.sent)
     return 1
 end
 
@@ -401,11 +418,11 @@ end
 ---@param bytes string|nil the final bytes to append to the body
 ---@return integer|nil If not nil sent successfully
 ---@return string if not nil the error message
-function Response:send(bytes)
+function Response:send(bytes, skip_length)
     if bytes then
         self.body = self.body .. bytes
     end
-    if not self._send_state.stage ~= 'body' then
+    if self._send_state.stage ~= 'body' and not skip_length then
         self:set_content_length(#self.body)
     end
     while (self._send_state.sent or 0) < #self.body do
@@ -414,9 +431,11 @@ function Response:send(bytes)
             return nil, e
         end
     end
-    ---one final call to the sink to clear any buffered data
-    self._sink()
     return 1
+end
+
+function Response:has_sent()
+    return self._send_state.stage ~= 'none'
 end
 
 --#endregion

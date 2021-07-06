@@ -41,33 +41,6 @@ function m.send_all(sock, s)
     return total_sent
 end
 
-function m.buffered_socket_sink(socket, size)
-    size = size or 1024
-    local buffer = ''
-    return function(bytes)
-        if bytes == nil then
-            if #buffer == 0 then
-                return 1
-            end
-            local s, e = m.send_all(socket, buffer)
-            if not s then
-                return nil, e
-            end
-            buffer = ''
-            return 1
-        end
-        buffer = buffer .. bytes
-        while #buffer >= size do
-            local s, e = m.send_all(socket, buffer:sub(1, size))
-            if not s then
-                return nil, e
-            end
-            buffer = buffer:sub(size+1)
-        end
-        return 1
-    end
-end
-
 ---Use a luasocket api conforming table as a source via the ltn12 api
 ---the function returned will attempt to call the `receive` method on the provided `socket`
 ---@param socket luasocket.tcp A tcp socket
@@ -162,7 +135,6 @@ function m.udp_socket_source(socket)
             return with_length(len)
         end
         return next_line()
-        
     end
 end
 

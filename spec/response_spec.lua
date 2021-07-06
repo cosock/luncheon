@@ -188,98 +188,86 @@ describe('Response', function()
             'First Line\n',
             'Second Line',
         }
-        for line in r:as_source() do
+        for line in r:iter() do
             assert.are.equal(expected_lines[ct], line)
             ct = ct + 1
         end
     end)
     describe('sink', function()
-        local ltn12 = require 'ltn12'
         it('can send', function()
-            local sent = {}
-            local r = Response.new(200, ltn12.sink.table(sent))
+            local socket = MockSocket.new()
+            local r = Response.new(200, socket)
             r:send('body')
-            assert.are.equal('HTTP/1.1 200 OK\r\n', sent[1])
-            assert.are.equal('Content-Length: 4\r\n', sent[2])
-            assert.are.equal('\r\n', sent[3])
-            assert.are.equal('body', sent[4])
+            assert.are.equal('HTTP/1.1 200 OK\r\n', socket.inner[1])
+            assert.are.equal('Content-Length: 4\r\n', socket.inner[2])
+            assert.are.equal('\r\n', socket.inner[3])
+            assert.are.equal('body', socket.inner[4])
         end)
         it('does not duplicate preamble', function()
-            local sent = {}
-            local r = Response.new(200, ltn12.sink.table(sent))
+            local socket = MockSocket.new()
+            local r = Response.new(200, socket)
             r:send_preamble()
             r:send_preamble()
-            assert.are.equal('HTTP/1.1 200 OK\r\n', sent[1])
-            assert.are.equal(1, #sent)
+            assert.are.equal('HTTP/1.1 200 OK\r\n', socket.inner[1])
+            assert.are.equal(1, #socket.inner)
         end)
         it('send_preamble forwards errors', function()
-            local r = Response.new(200, function() return nil, 'error' end)
+            local socket = MockSocket.new({}, {'error'})
+            local r = Response.new(200, socket)
             local s, e = r:send_preamble()
             assert.is.falsy(s)
             assert.are.equal('error', e)
         end)
         it('send_header forwards errors', function()
-            local ct = 0
-            local r = Response.new(200, function()
-                if ct == 0 then
-                    ct = ct + 1
-                    return 1
-                end
-                return nil, 'error'
-            end)
+            local socket = MockSocket.new({}, {})
+            local r = Response.new(200, socket)
             assert(r:send_preamble())
+            table.insert(socket.send_errs, 'error')
             local s, e = r:send_header()
             assert.is.falsy(s)
             assert.are.equal('error', e)
         end)
         it('send_header forwards errors deeper', function()
-            local ct = 0
-            local r = Response.new(200, function()
-                if ct == 0 then
-                    ct = ct + 1
-                    return 1
-                end
-                return nil, 'error'
-            end):add_header('X-A-Header', 'yes')
+            local socket = MockSocket.new({}, {})
+            local r = Response.new(200, socket):add_header('X-A-Header', 'yes')
             assert(r:send_preamble())
+            table.insert(socket.send_errs, 'error')
             local s, e = r:send_header()
             assert.is.falsy(s)
             assert.are.equal('error', e)
         end)
         it('cannot send headers after body', function()
-            local sent = {}
-            local r = Response.new(200, ltn12.sink.table(sent))
+            local socket = MockSocket.new({}, {})
+            local r = Response.new(200, socket)
             assert(r:send('asdf'))
             local s, e = r:send_header()
             assert.is.falsy(s)
             assert.are.equal('cannot send headers after body', e)
         end)
         it('send_body_chunk forwards errors', function()
-            local ct = 0
-            local r = Response.new(200, function()
-                if ct < 2 then
-                    ct = ct + 1
-                    return 1
-                end
-                return nil, 'error'
-            end):add_header('X-A-Header', 'yes')
+            local socket = MockSocket.new({}, {})
+            local r = Response.new(200, socket):add_header('X-A-Header', 'yes')
+                :append_body('asdf')
             assert(r:send_preamble())
             assert(r:send_header())
+            assert(r:send_header())
+            assert(r:send_header())
+            table.insert(socket.send_errs, 'error')
             local s, e = r:send_body_chunk()
             assert.is.falsy(s)
             assert.are.equal('error', e)
         end)
-        it('send forwards errors #new', function()
-            local ct = 0
-            local s, e = Response.new(200, function()
-                if ct < 3 then
-                    ct = ct + 1
-                    return 1
-                end
-                return nil, 'error'
-            end):send('asdf')
+        it('send forwards errors', function()
+            local socket = MockSocket.new({}, {'error'})
+            local s, e = Response.new(200, socket):send('asdf')
             assert.is.falsy(s)
             assert.are.equal('error', e)
+        end)
+        it('has_sent', function()
+            local socket = MockSocket.new({}, {})
+            local res = assert(Response.new(200, socket))
+            res:send('asdf')
+            assert(res:has_sent())
         end)
     end)
 end)

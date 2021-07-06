@@ -2,13 +2,14 @@
 local MockSocket = {}
 MockSocket.__index = MockSocket
 
-function MockSocket.new(inner)
+function MockSocket.new(inner, send_errs)
     local ret = {
         recvd = 0,
         sent = 0,
         inner = inner or {},
         open = true,
         timeouts = 0,
+        send_errs = send_errs or {},
     }
     setmetatable(ret, MockSocket)
     return ret
@@ -71,6 +72,9 @@ function MockSocket:send(s)
     if string.find(s, 'panic') and not self.panicked then
         self.panicked = true
         error('panic')
+    end
+    if next(self.send_errs) then
+        return nil, table.remove(self.send_errs, 1)
     end
     self.inner = self.inner or {}
     self.sent = self.sent + #(s or '')

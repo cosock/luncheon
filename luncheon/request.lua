@@ -11,6 +11,7 @@ local utils = require 'luncheon.utils'
 ---@field public http_version string The http version from the request first line
 ---@field public headers Headers The HTTP headers for this request
 ---@field public body string The contents of the request's body
+---@field public socket table Lua socket for receiving/sending
 ---@field private _source fun():string ltn12 source
 ---@field private _parsed_headers boolean
 ---@field private _headers Headers
@@ -63,18 +64,28 @@ function Request.source(source)
     return r
 end
 
+---Create a new Request with a lua socket
+---@param socket table tcp socket
+---@return Request
 function Request.tcp_source(socket)
     local utils = require 'luncheon.utils'
-    return Request.source(
+    local ret = Request.source(
         utils.tcp_socket_source(socket)
     )
+    ret.socket = socket
+    return ret
 end
 
+---Create a new Request with a lua socket
+---@param socket table udp socket
+---@return Request
 function Request.udp_source(socket)
     local utils = require 'luncheon.utils'
-    return Request.source(
+    local ret =  Request.source(
         utils.udp_socket_source(socket)
     )
+    ret.socket = socket
+    return ret
 end
 
 ---Get the headers for this request
@@ -183,9 +194,9 @@ end
 ---Construct a request Builder
 ---@param method string an http method string
 ---@param url string|table the path for this request as a string or as a net_url table
----@param sink fun(chunk:string) (Optional) 
+---@param socket table
 ---@return Request
-function Request.new(method, url, sink)
+function Request.new(method, url, socket)
     if type(url) == 'string' then
         url = net_url.parse(url)
     end
@@ -195,7 +206,7 @@ function Request.new(method, url, sink)
         headers = Headers.new({content_length = 0}),
         http_version = '1.1',
         body = '',
-        _sink = sink,
+        socket = socket,
         _send_state = {
             stage = 'none',
         },
@@ -254,6 +265,7 @@ function Request:_serialize_path()
     end
     return path .. '?' .. net_url.buildQuery(self.url.query)
 end
+
 ---Private method for serializing the first line of the request
 ---@return string
 function Request:_serialize_preamble()
@@ -272,11 +284,11 @@ function Request:serialize()
     return head .. self.body
 end
 
----Serialize this request as an ltn12 source that will
+---Serialize this request as a lua iterator that will
 ---provide the next line (including new line characters).
 ---This will split the body on any internal new lines as well
 ---@return fun():string
-function Request:as_source()
+function Request:iter()
     local state = 'preamble'
     local last_header, value
     local body = self.body or ''
@@ -317,7 +329,7 @@ function Request:send_preamble()
         return 1 --already sent
     end
     local line = self:_serialize_preamble() .. '\r\n'
-    local s, err = self._sink(line)
+    local s, err = utils.send_all(self.socket, line)
     if not s then
         return nil, err
     end
@@ -337,7 +349,7 @@ function Request:send_header()
     end
     local key, value = next(self.headers._inner, self._send_state.last_header)
     if not key then
-        local s, e = self._sink('\r\n')
+        local s, e = utils.send_all(self.socket, '\r\n')
         if not s then
             return nil, e
         end
@@ -348,7 +360,7 @@ function Request:send_header()
         return 1
     end
     local line = Headers.serialize_header(key, value) .. '\r\n'
-    local s, e = self._sink(line)
+    local s, e = utils.send_all(self.socket, line)
     if not s then
         return nil, e
     end
@@ -367,7 +379,7 @@ function Request:send_body_chunk()
     local start_idx = self._send_state.sent + 1
     local end_idx = start_idx + 1024
     local chunk = self.body:sub(start_idx, end_idx)
-    local s, e = self._sink(chunk)
+    local s, e = utils.send_all(self.socket, chunk)
     if not s then
         return nil, e
     end
@@ -379,11 +391,11 @@ end
 ---@param bytes string|nil the final bytes to append to the body
 ---@return integer|nil If not nil sent successfully
 ---@return string if not nil the error message
-function Request:send(bytes)
+function Request:send(bytes, skip_length)
     if bytes then
         self.body = self.body .. bytes
     end
-    if not self._send_state.stage ~= 'body' then
+    if self._send_state.stage ~= 'body' and not skip_length then
         self:set_content_length(#self.body)
     end
     while (self._send_state.sent or 0) < #self.body do

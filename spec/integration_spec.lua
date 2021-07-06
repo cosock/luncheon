@@ -17,7 +17,7 @@ describe('real sockets tests', function ()
       assert.are.equal(expected_body, body)
       local res = assert(Response.new(200))
         :append_body(body)
-      for chunk in res:as_source() do
+      for chunk in res:iter() do
         assert(incoming:send(chunk))
       end
     end, 'server task')
@@ -26,7 +26,7 @@ describe('real sockets tests', function ()
       client:connect(ip, port)
       local r = assert(Request.new('GET', '/'))
         :append_body(expected_body)
-      for chunk in r:as_source() do
+      for chunk in r:iter() do
         assert(client:send(chunk))
       end
       local res = assert(Response.tcp_source(client))
@@ -51,7 +51,7 @@ describe('real sockets tests', function ()
       assert.are.equal(expected_body, req:get_body())
       local res = assert(Response.new(200))
         :append_body(expected_body)
-      for chunk in res:as_source() do
+      for chunk in res:iter() do
         assert(server:send(chunk))
       end
     end, 'server task')
@@ -59,7 +59,7 @@ describe('real sockets tests', function ()
       client:setpeername(server_ip, server_port)
       local r = assert(Request.new('GET', '/'))
         :append_body(expected_body)
-      for chunk in r:as_source() do
+      for chunk in r:iter() do
         assert(client:send(chunk))
       end
       local res = assert(Response.udp_source(client))
