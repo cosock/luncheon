@@ -1,11 +1,11 @@
 package = "luncheon"
 version = "0.0.0-10"
 source = {
-   url = "git://github.com/FreeMasen/luncheon",
+   url = "git://github.com/cosock/luncheon",
    tag = "v0.0.0-10"
 }
 description = {
-   homepage = "https://github.com/FreeMasen/luncheon",
+   homepage = "https://github.com/cosock/luncheon",
    license = "MIT"
 }
 dependencies = {
