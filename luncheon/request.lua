@@ -398,13 +398,17 @@ function Request:send(bytes, skip_length)
     if self._send_state.stage ~= 'body' and not skip_length then
         self:set_content_length(#self.body)
     end
-    while (self._send_state.sent or 0) < #self.body do
+    while not self:_sending_body() or (self._send_state.sent or 0) < #self.body do
         local s, e = self:send_body_chunk()
         if not s then
             return nil, e
         end
     end
     return 1
+end
+
+function Request:_sending_body()
+    return self._send_state.stage == 'body'
 end
 
 --#endregion
