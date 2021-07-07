@@ -50,9 +50,12 @@ end
 ---@return Response
 function Response.tcp_source(socket)
     local utils = require 'luncheon.utils'
-    local ret = Response.source(
+    local ret, err = Response.source(
         utils.tcp_socket_source(socket)
     )
+    if not ret then
+        return nil, err
+    end
     ret.socket = socket
     return ret
 end
@@ -62,9 +65,12 @@ end
 ---@return Response
 function Response.udp_source(socket)
     local utils = require 'luncheon.utils'
-    local ret =  Response.source(
+    local ret, err =  Response.source(
         utils.udp_socket_source(socket)
     )
+    if not ret then
+        return nil, err
+    end
     ret.socket = socket
     return ret
 end

@@ -69,21 +69,27 @@ end
 ---@return Request
 function Request.tcp_source(socket)
     local utils = require 'luncheon.utils'
-    local ret = Request.source(
+    local ret, err = Request.source(
         utils.tcp_socket_source(socket)
     )
+    if not ret then
+        return nil, err
+    end
     ret.socket = socket
     return ret
 end
 
 ---Create a new Request with a lua socket
 ---@param socket table udp socket
----@return Request
+---@return Request, string|nil
 function Request.udp_source(socket)
     local utils = require 'luncheon.utils'
-    local ret =  Request.source(
+    local ret, err =  Request.source(
         utils.udp_socket_source(socket)
     )
+    if not ret then
+        return nil, err
+    end
     ret.socket = socket
     return ret
 end
