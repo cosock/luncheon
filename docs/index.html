@@ -251,18 +251,15 @@ to receive incoming HTTP <code class="docutils literal notranslate"><span class=
 <span class="nb">assert</span><span class="p">(</span><span class="n">tcp</span><span class="p">:</span><span class="n">listen</span><span class="p">())</span>
 <span class="kr">while</span> <span class="kc">true</span> <span class="kr">do</span>
   <span class="kd">local</span> <span class="n">incoming</span> <span class="o">=</span> <span class="nb">assert</span><span class="p">(</span><span class="n">tcp</span><span class="p">:</span><span class="n">accept</span><span class="p">())</span>
-  <span class="kd">local</span> <span class="n">source</span> <span class="o">=</span> <span class="n">utils</span><span class="p">.</span><span class="n">tcp_socket_source</span><span class="p">(</span><span class="n">incoming</span><span class="p">)</span>
-  <span class="kd">local</span> <span class="n">req</span> <span class="o">=</span> <span class="nb">assert</span><span class="p">(</span><span class="n">Request</span><span class="p">.</span><span class="n">source</span><span class="p">(</span><span class="n">source</span><span class="p">))</span>
+  <span class="kd">local</span> <span class="n">req</span> <span class="o">=</span> <span class="nb">assert</span><span class="p">(</span><span class="n">Request</span><span class="p">.</span><span class="n">tcp_source</span><span class="p">(</span><span class="n">incoming</span><span class="p">))</span>
   <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Request&#39;</span><span class="p">)</span>
   <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;url&#39;</span><span class="p">,</span> <span class="n">req</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">path</span><span class="p">)</span>
   <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;method&#39;</span><span class="p">,</span> <span class="n">req</span><span class="p">.</span><span class="n">method</span><span class="p">)</span>
   <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;body&#39;</span><span class="p">,</span> <span class="n">req</span><span class="p">:</span><span class="n">get_body</span><span class="p">())</span>
-  <span class="kd">local</span> <span class="n">res</span> <span class="o">=</span> <span class="n">Response</span><span class="p">.</span><span class="n">new</span><span class="p">()</span>
+  <span class="kd">local</span> <span class="n">res</span> <span class="o">=</span> <span class="n">Response</span><span class="p">.</span><span class="n">new</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="n">utils</span><span class="p">.</span><span class="n">buffered_socket_sink</span><span class="p">(</span><span class="n">incoming</span><span class="p">))</span>
     <span class="p">:</span><span class="n">add_header</span><span class="p">(</span><span class="s1">&#39;Server&#39;</span><span class="p">,</span> <span class="s1">&#39;Luncheon Echo Server&#39;</span><span class="p">)</span>
     <span class="p">:</span><span class="n">append_body</span><span class="p">(</span><span class="n">req</span><span class="p">:</span><span class="n">get_body</span><span class="p">())</span>
-  <span class="kr">for</span> <span class="n">chunk</span> <span class="kr">in</span> <span class="n">res</span><span class="p">:</span><span class="n">as_source</span><span class="p">()</span> <span class="kr">do</span>
-    <span class="nb">assert</span><span class="p">(</span><span class="n">utils</span><span class="p">.</span><span class="n">send_all</span><span class="p">(</span><span class="n">incoming</span><span class="p">,</span> <span class="n">chunk</span><span class="p">))</span>
-  <span class="kr">end</span>
+    <span class="p">:</span><span class="n">send</span><span class="p">()</span>
   <span class="n">incoming</span><span class="p">:</span><span class="n">close</span><span class="p">()</span>
 <span class="kr">end</span>
 </pre></div>

@@ -178,6 +178,14 @@
       <li><a href="request.html#Request._fill_headers">_fill_headers() (Request method)</a>
 </li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="request.html#Request._sending_body">_sending_body() (Request method)</a>
+
+      <ul>
+        <li><a href="response.html#Response._sending_body">(Response method)</a>
+</li>
+      </ul></li>
+  </ul></td>
 </tr></table>
 
 <h2 id="A">A</h2>
@@ -191,22 +199,16 @@
       </ul></li>
       <li><a href="headers.html#Headers.append">append() (Headers method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="request.html#Request.append_body">append_body() (Request method)</a>
 
       <ul>
         <li><a href="response.html#Response.append_body">(Response method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="headers.html#Headers.append_chunk">append_chunk() (Headers method)</a>
 </li>
-      <li><a href="request.html#Request.as_source">as_source() (Request method)</a>
-
-      <ul>
-        <li><a href="response.html#Response.as_source">(Response method)</a>
-</li>
-      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -263,6 +265,8 @@
 <h2 id="H">H</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="response.html#Response.has_sent">has_sent() (Response method)</a>
+</li>
       <li><a href="headers.html#Headers">Headers (built-in class)</a>
 </li>
   </ul></td>
@@ -278,7 +282,13 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="headers.html#Headers.iter">iter() (Headers method)</a>
+
+      <ul>
+        <li><a href="request.html#Request.iter">(Request method)</a>
 </li>
+        <li><a href="response.html#Response.iter">(Response method)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -286,15 +296,19 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="request.html#Request.new">new() (Request static method)</a>
+
+      <ul>
+        <li><a href="response.html#Response.new">(Response static method)</a>
 </li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="utils.html#utils.next_line">next_line() (in module utils)</a>
 
       <ul>
         <li><a href="response.html#Response.next_line">(Response method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="headers.html#Headers.normalize_key">normalize_key() (Headers static method)</a>
 </li>
   </ul></td>
@@ -304,8 +318,6 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="request.html#Request">Request (built-in class)</a>
-</li>
-      <li><a href="request.html#Request._headers">Request._headers (attribute)</a>
 </li>
       <li><a href="request.html#Request._parsed_headers">Request._parsed_headers (attribute)</a>
 </li>
@@ -320,6 +332,8 @@
       <li><a href="request.html#Request.http_version">Request.http_version (attribute)</a>
 </li>
       <li><a href="request.html#Request.method">Request.method (attribute)</a>
+</li>
+      <li><a href="request.html#Request.socket">Request.socket (attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -339,6 +353,8 @@
 </li>
       <li><a href="response.html#Response.http_version">Response.http_version (attribute)</a>
 </li>
+      <li><a href="response.html#Response.socket">Response.socket (attribute)</a>
+</li>
       <li><a href="response.html#Response.status">Response.status (attribute)</a>
 </li>
   </ul></td>
@@ -347,8 +363,32 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="request.html#Request.send">send() (Request method)</a>
+
+      <ul>
+        <li><a href="response.html#Response.send">(Response method)</a>
+</li>
+      </ul></li>
       <li><a href="utils.html#utils.send_all">send_all() (in module utils)</a>
 </li>
+      <li><a href="request.html#Request.send_body_chunk">send_body_chunk() (Request method)</a>
+
+      <ul>
+        <li><a href="response.html#Response.send_body_chunk">(Response method)</a>
+</li>
+      </ul></li>
+      <li><a href="request.html#Request.send_header">send_header() (Request method)</a>
+
+      <ul>
+        <li><a href="response.html#Response.send_header">(Response method)</a>
+</li>
+      </ul></li>
+      <li><a href="request.html#Request.send_preamble">send_preamble() (Request method)</a>
+
+      <ul>
+        <li><a href="response.html#Response.send_preamble">(Response method)</a>
+</li>
+      </ul></li>
       <li><a href="headers.html#Headers.serialize">serialize() (Headers method)</a>
 
       <ul>
@@ -357,6 +397,8 @@
         <li><a href="response.html#Response.serialize">(Response method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="headers.html#Headers.serialize_header">serialize_header() (Headers static method)</a>
 </li>
       <li><a href="request.html#Request.set_content_length">set_content_length() (Request method)</a>
@@ -365,8 +407,6 @@
         <li><a href="response.html#Response.set_content_length">(Response method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="request.html#Request.set_content_type">set_content_type() (Request method)</a>
 
       <ul>
@@ -390,6 +430,14 @@
       <li><a href="utils.html#utils.tcp_socket_source">tcp_socket_source() (in module utils)</a>
 </li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="request.html#Request.tcp_source">tcp_source() (Request static method)</a>
+
+      <ul>
+        <li><a href="response.html#Response.tcp_source">(Response static method)</a>
+</li>
+      </ul></li>
+  </ul></td>
 </tr></table>
 
 <h2 id="U">U</h2>
@@ -397,6 +445,12 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="utils.html#utils.udp_socket_source">udp_socket_source() (in module utils)</a>
 </li>
+      <li><a href="request.html#Request.udp_source">udp_source() (Request static method)</a>
+
+      <ul>
+        <li><a href="response.html#Response.udp_source">(Response static method)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="utils.html#module-utils">utils (module)</a>
