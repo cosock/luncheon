@@ -157,9 +157,10 @@ function Headers:get_all(key)
     return values
 end
 
+---Return a lua iterator over the key/value pairs in this header map
 function Headers:iter()
     local last = nil
-    return function (key)
+    return function ()
         local k, v = next(self._inner, last)
         last = k
         if not k then

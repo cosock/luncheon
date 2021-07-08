@@ -14,7 +14,6 @@ local utils = require 'luncheon.utils'
 ---@field public socket table Lua socket for receiving/sending
 ---@field private _source fun():string ltn12 source
 ---@field private _parsed_headers boolean
----@field private _headers Headers
 ---@field private _received_body boolean
 local Request = {}
 Request.__index = Request
@@ -34,7 +33,7 @@ function Request._parse_preamble(line)
         url = net_url.parse(path),
         http_version = http_version,
         body = nil,
-        _headers = nil,
+        headers = nil,
     }
 end
 
@@ -105,7 +104,7 @@ function Request:get_headers()
             return nil, err
         end
     end
-    return self._headers
+    return self.headers
 end
 
 ---read from the socket filling in the headers property
@@ -130,13 +129,13 @@ function Request:_parse_header()
     if err ~= nil then
         return nil, err
     end
-    if self._headers == nil then
-        self._headers = Headers.new()
+    if self.headers == nil then
+        self.headers = Headers.new()
     end
     if line == '' then
         return true
     else
-        self._headers:append_chunk(line)
+        self.headers:append_chunk(line)
     end
     return false
 end
@@ -216,6 +215,7 @@ function Request.new(method, url, socket)
         _send_state = {
             stage = 'none',
         },
+        _parsed_header = true
     }, Request)
 end
 
