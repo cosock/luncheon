@@ -1,0 +1,38 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - env: 
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+        uses: xpol/setup-lua@v0.2
+      - uses: leafo/gh-actions-luarocks@v4
+      - name: install busted
+        run: luarocks install busted
+      - name: install luacov
+        run: luarocks install luacov
+      - name: install cosock
+        run: luarocks install cosock
+      - name: install luasec
+        run: luarocks install luasec
+      - name: luarocks make
+        run: luarocks make
+      - name: test
+        run: |
+          busted -c \
+          && bash <(curl -s https://codecov.io/bash)
+        env: 
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
