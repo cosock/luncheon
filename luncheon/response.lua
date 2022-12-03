@@ -80,7 +80,7 @@ end
 ---@return nil|table @`{http_version: number, status: number, status_msg: string}`
 ---@return nil|string @Error message if populated
 function Response._parse_preamble(line)
-    local version, status, msg = string.match(line, 'HTTP/([0-9.]+) ([^%s]+) ([^%s]+)')
+    local version, status, msg = string.match(line, 'HTTP/([0-9.]+) ([^%s]+) (.+)')
     if not version then
         return nil, string.format('invalid preamble: %q', line)
     end
