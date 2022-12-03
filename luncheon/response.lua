@@ -9,6 +9,7 @@ local utils = require 'luncheon.utils'
 ---@field public headers Headers The HTTP headers for this response
 ---@field public body string the contents of the response body
 ---@field public status number The HTTP status 3 digit number
+---@filed public status_msg string The HTTP status message
 ---@field public http_version string
 ---@field public socket table The socket to send/receive on
 ---@field private _source fun(pat:string|nil):string ltn12 source
@@ -205,8 +206,8 @@ end
 --#region builder
 
 ---Create a new response for building in memory
----@param status_code number
----@param socket table luasocket for sending
+---@param status_code number|nil if not provided 200
+---@param socket table|nil luasocket for sending (not required)
 function Response.new(status_code, socket)
     if status_code == nil then
         status_code = 200
@@ -239,7 +240,7 @@ end
 ---note: this is additive, though the _last_ value is used during
 ---serialization
 ---@param key string
----@param value string
+---@param value any If not a string will call tostring
 ---@return Response
 function Response:add_header(key, value)
     if type(value) ~= 'string' then
