@@ -272,6 +272,13 @@ end
 ---Serialize this full response into a string
 ---@return string
 function Response:serialize()
+    if self._source then
+        if not self.body then
+            self:_fill_body()
+        end
+        return self:_generate_prebody()
+            .. self.body
+    end
     self:set_content_length(#self.body)
     return self:_generate_prebody()
         .. (self.body or '')
