@@ -42,7 +42,7 @@ function MockSocket.new_with_preamble(method, path)
     })
 end
 
-function MockSocket:receive()
+function MockSocket:receive(pat)
     if #self.inner == 0 then
         return nil, 'empty'
     end
