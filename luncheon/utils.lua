@@ -8,10 +8,11 @@ local socket_wrapper = {}
 socket_wrapper.__index = socket_wrapper
 
 ---Attempt to call the `send` method on the provided, `sock` retrying on failure or timeout
----@param sock luasocket.socket The socket to send on
+---@param sock {send: fun(any): integer|nil,nil|string} The socket to send on
 ---@param s string The string to send
 ---@return integer|nil @the number of bytes sent if not `nil`
 ---@return nil|string @the last error message encountered if not `nil`
+---@return nil|integer total bytes sent before failure
 function m.send_all(sock, s)
     local total_sent = 0
     local target = #s
@@ -41,10 +42,10 @@ function m.send_all(sock, s)
     return total_sent
 end
 
----Use a luasocket api conforming table as a source via the ltn12 api
----the function returned will attempt to call the `receive` method on the provided `socket`
----@param socket luasocket.tcp A tcp socket
----@return fun(pat:string|integer|nil):string,string
+---Use a luasocket api conforming table as a source function returned will attempt
+---to call the `receive` method on the provided `socket`
+---@param socket {receive: fun(any,any):string|nil,string|nil,string|nil} A tcp socket
+---@return fun(pat:string|integer|nil):string|nil,string|nil,string|nil
 function m.tcp_socket_source(socket)
     return function(pat)
         if pat == 0 then
@@ -60,7 +61,7 @@ end
 ---Get the first line from a chunk, discarding the new line characters, returning
 ---the line followed by the remainder of the chunk after that line
 ---@param chunk string
----@return string @If not nil, the line found, if nil no new line character was found
+---@return string|nil If not nil, the line found, if nil no new line character was found
 ---@return string
 function m.next_line(chunk, include_nl)
     local _, e, line = string.find(chunk, '^([^\n]+\n)')
@@ -89,10 +90,10 @@ function m.extract_len(chunk, len)
     return ret, rem
 end
 
----wrap a luasocket udp socket in an ltn12 source function, this will handle finding new line
+---wrap a luasocket udp socket in a source function, this will handle finding new line
 ---characters. This will call `receive` on the provided `socket` repeatedly until a new line is found
----@param socket luasocket.udp
----@return function():string,string
+---@param socket {receive: fun(any,any):string|nil,string|nil,string|nil}
+---@return function():string|nil,string|nil,string|nil
 function m.udp_socket_source(socket)
     local buffer = ''
     -- If this source is called with a length argument,
