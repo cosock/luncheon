@@ -1,6 +1,7 @@
 local Headers = require 'luncheon.headers'
 local statuses = require 'luncheon.status'
 local utils = require 'luncheon.utils'
+local shared = require 'luncheon.shared'
 
 ---@class Response
 ---
@@ -92,67 +93,15 @@ function Response._parse_preamble(line)
     }
 end
 
----Fill this incoming request's headers
----@return nil|string @if not `nil` an error message
-function Response:_fill_headers()
-    while true do
-        local done, err = self:_parse_header()
-        if err ~= nil then
-            return err
-        end
-        if done then
-            self._parsed_headers = true
-            return
-        end
-    end
-end
-
 function Response:get_headers()
-    if not self._parsed_headers then
-        local err = self:_fill_headers()
-        if err ~= nil then
-            return nil, err
-        end
-    end
-    return self.headers
-end
-
----Read a single line from the socket and parse it as an http header, appending to self.headers
----returns true when the end of the http headers
----@return boolean|nil @true when end of headers have been reached, nil when error
----@return string|nil @when not nil the error message
-function Response:_parse_header()
-    local line, err = self:_next_line()
-    if err ~= nil then
-        return nil, err
-    end
-    if line == '' then
-        return true
-    else
-        self.headers:append_chunk(line)
-    end
-    return false
+    return shared.SharedLogic.get_headers(self)
 end
 
 ---Attempt to get the value from Content-Length header
 ---@return number|nil @when not `nil` the Content-Length
 ---@return string|nil @when not `nil` the error message
 function Response:get_content_length()
-    if not self._parsed_headers then
-        self:_fill_headers()
-    end
-    if not self._content_length then
-        local cl = self.headers:get_one('content_length')
-        if not cl then
-            return
-        end 
-        local n = math.tointeger(cl)
-        if not n then
-            return nil, 'bad Content-Length header'
-        end
-        self._content_length = n
-    end
-    return self._content_length
+    return shared.SharedLogic.get_content_length(self)
 end
 
 ---Get the next line from an incoming request, checking first
@@ -166,31 +115,8 @@ function Response:next_line()
     return self:_next_line()
 end
 
----Read from the socket, filling the body property
----of this request
----@return string|nil
-function Response:_fill_body()
-    local len, err = self:get_content_length()
-    if err ~= nil then
-        return err
-    end
-    len = len or '*a'
-    local body, err = self._source(len)
-    if not body then
-        return err
-    end
-    self.body = body
-    self._received_body = true
-end
-
 function Response:get_body()
-    if not self._received_body then
-        local err = self:_fill_body()
-        if err ~= nil then
-            return nil, err
-        end
-    end
-    return self.body
+    return shared.SharedLogic.get_body(self)
 end
 
 ---Receive the next line from an incoming request w/o checking
@@ -230,6 +156,7 @@ function Response.new(status_code, socket)
             _send_state = {
                 stage = 'none',
             },
+            mode = shared.Mode.Outgoing,
         },
         Response
     )
@@ -273,21 +200,12 @@ end
 ---Serialize this full response into a string
 ---@return string
 function Response:serialize()
-    if self._source then
-        if not self.body then
-            self:_fill_body()
-        end
-        return self:_generate_prebody()
-            .. self.body
-    end
-    self:set_content_length(#self.body)
-    return self:_generate_prebody()
-        .. (self.body or '')
+    return shared.SharedLogic.serialize(self)
 end
 
 ---Generate the first line of this response without the trailing \r\n
----@return string
-function Response:_generate_preamble()
+---@return string|nil
+function Response:_serialize_preamble()
     return string.format('HTTP/%s %s %s',
         self.http_version,
         self.status,
@@ -330,32 +248,7 @@ end
 ---for this Response
 ---@return function
 function Response:iter()
-    local state = 'start'
-    local last_header, value
-    local suffix = '\r\n'
-    local body = self.body
-    return function()
-        if state == 'start' then
-            state = 'headers'
-            return self:_generate_preamble() .. suffix
-        end
-        if state == 'headers' then
-            last_header, value = next(self.headers._inner, last_header)
-            if not last_header then
-                state = 'body'
-                return suffix
-            end
-            return Headers.serialize_header(last_header, value) .. suffix
-        end
-        if state == 'body' then
-            value, body = utils.next_line(body, true)
-            if not value then
-                state = nil
-                return body
-            end
-            return value
-        end
-    end
+    return shared.SharedLogic.iter(self)
 end
 
 --#endregion
@@ -369,7 +262,7 @@ function Response:send_preamble()
     if self._send_state.stage ~= 'none' then
         return 1 --already sent
     end
-    local line = self:_generate_preamble() .. '\r\n'
+    local line = self:_serialize_preamble() .. '\r\n'
     local s, err = utils.send_all(self.socket, line)
     if not s then
         return nil, err

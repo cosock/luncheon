@@ -1,6 +1,7 @@
 local net_url = require 'net.url'
 local Headers = require 'luncheon.headers'
 local utils = require 'luncheon.utils'
+local shared = require 'luncheon.shared'
 
 ---@class Request
 ---
@@ -47,6 +48,7 @@ function Request.source(source)
     local r = {
         _source = source,
         _parsed_headers = false,
+        mode = shared.Mode.Incoming,
     }
     setmetatable(r, Request)
     local line, acc_err = r:_next_line()
@@ -98,46 +100,7 @@ end
 ---if not already parsed
 ---@return Headers, string|nil
 function Request:get_headers()
-    if self._parsed_headers == false then
-        local err = self:_fill_headers()
-        if err ~= nil then
-            return nil, err
-        end
-    end
-    return self.headers
-end
-
----read from the socket filling in the headers property
-function Request:_fill_headers()
-    while true do
-        local done, err = self:_parse_header()
-        if err ~= nil then
-            return err
-        end
-        if done then
-            self._parsed_headers = true
-            return
-        end
-    end
-end
-
----Read a single line from the socket and parse it as an http header
----returning true when the end of the http headers
----@return boolean|nil, string|nil
-function Request:_parse_header()
-    local line, err = self:_next_line()
-    if err ~= nil then
-        return nil, err
-    end
-    if self.headers == nil then
-        self.headers = Headers.new()
-    end
-    if line == '' then
-        return true
-    else
-        self.headers:append_chunk(line)
-    end
-    return false
+    return shared.SharedLogic.get_headers(self)
 end
 
 ---Read a single line from the socket
@@ -152,45 +115,14 @@ end
 ---from the socket
 ---@return string|nil, string|nil
 function Request:get_body()
-    if not self._received_body then
-        local err = self:_fill_body()
-        if err ~= nil then
-            return nil, err
-        end
-    end
-    return self.body
-end
-
----Read from the socket, filling the body property
----of this request
----@return string|nil
-function Request:_fill_body()
-    local len, err = self:content_length()
-    if err ~= nil then
-        return err
-    end
-    self.body = self._source(len or 0)
-    self._received_body = true
+    return shared.SharedLogic.get_body(self)
 end
 
 ---Get the value from the Content-Length header that should be present
 ---for all http requests
 ---@return number|nil, string|nil
-function Request:content_length()
-    local headers, err = self:get_headers()
-    if not headers then
-        return nil, err
-    end
-    local cl = headers:get_one('content_length')
-    if cl == nil then
-        return nil
-    end
-    local n = math.tointeger(cl)
-    if not n then
-        return nil, 'Invalid content length'
-    end
-    headers.content_length = n
-    return n
+function Request:get_content_length()
+    return shared.SharedLogic.get_content_length(self)
 end
 
 --#endregion Parser
@@ -215,7 +147,8 @@ function Request.new(method, url, socket)
         _send_state = {
             stage = 'none',
         },
-        _parsed_header = true
+        _parsed_header = true,
+        mode = shared.Mode.Outgoing,
     }, Request)
 end
 
@@ -281,13 +214,7 @@ end
 ---Serialize this request into a single string
 ---@return string
 function Request:serialize()
-    self:content_length(#self.body)
-    local head = table.concat({
-        self:_serialize_preamble(),
-        self.headers:serialize(),
-        ''
-    }, '\r\n')
-    return head .. self.body
+    return shared.SharedLogic.serialize(self)
 end
 
 ---Serialize this request as a lua iterator that will
@@ -295,32 +222,7 @@ end
 ---This will split the body on any internal new lines as well
 ---@return fun():string
 function Request:iter()
-    local state = 'preamble'
-    local last_header, value
-    local body = self.body or ''
-    return function()
-        if state == 'preamble' then
-            state = 'headers'
-            local pre = self:_serialize_preamble()
-            return pre .. '\r\n'
-        end
-        if state == 'headers' then
-            last_header, value = next(self.headers._inner, last_header)
-            if not last_header then
-                state = 'body'
-                return '\r\n'
-            end
-            return Headers.serialize_header(last_header, value) .. '\r\n'
-        end
-        if state == 'body' then
-            value, body = utils.next_line(body, true)
-            if not value then
-                state = nil
-                return body
-            end
-            return value
-        end
-    end
+    return shared.SharedLogic.iter(self)
 end
 
 --#endregion Builder
