@@ -1,0 +1,29 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches:
+      - misc-fixes
+
+jobs:
+  deploy:
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        
+      - name: Setup Sphinx deps
+        run: pip install m2r2 sphinx-rtd-theme sphinx-lua sphinxcontrib-luadomain
+      
+      - name: Sphinx Build
+        uses: ammaraskar/sphinx-action@0.4
+        with:
+          build-command: sphinx-build -b html ./predocs ./docs
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
