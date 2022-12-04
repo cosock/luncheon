@@ -132,7 +132,7 @@ function m.udp_socket_source(socket)
         end
     end
     return function(len)
-        if len then
+        if type(len) == 'number' then
             return with_length(len)
         end
         return next_line()
