@@ -156,4 +156,45 @@ describe('utils', function ()
             end)
         end)
     end)
+    describe("chunk_body_source #c", function()
+        it("wikipedia example works", function()
+            local chunks = {
+                "4",
+                "Wiki",
+                "6",
+                "pedia ",
+                "E",
+                "in ",
+                "",
+                "chunks.",
+                "0",
+                "",
+            }
+            local mock_socket
+            do
+                local all_contents = table.concat(chunks, '\r\n')
+                local start = 1
+                mock_socket = {
+                    receive = function(self, length)
+                        
+                        local chunk = string.sub(all_contents, start, start + length)
+                        start = start + length
+                        return chunk
+                    end,
+                }
+            end
+            local source = utils.chunk_body_source(mock_socket)
+            local ct = 1
+            local expected = {
+                "Wiki",
+                "pedia ",
+                "in \r\n\r\nchunks.",
+                ""
+            }
+            for chunk in source do
+                assert.are.same(expected[ct], chunk)
+                ct = ct + 1
+            end
+        end)
+    end)
 end)

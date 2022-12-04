@@ -42,6 +42,32 @@ function m.send_all(sock, s)
     return total_sent
 end
 
+function m.chunk_body_source(socket)
+    local reached_end = false
+    return function()
+        if reached_end then
+            return
+        end
+        local byte, chunk, err
+        byte, err = socket:receive(3)
+        if not byte then
+            return nil, err
+        end
+        byte = tonumber(string.sub(byte, 1, 1), 16) or byte
+        if type(byte) ~= 'number' then
+            return nil, 'invalid chunk length'
+        end
+        chunk, err = socket:receive(byte + 2)
+        if not chunk then
+            return nil, err
+        end
+        if byte == 0 then
+            reached_end = true
+        end
+        return string.sub(chunk, 1, #chunk-3)
+    end
+end
+
 ---Use a luasocket api conforming table as a source function returned will attempt
 ---to call the `receive` method on the provided `socket`
 ---@param socket {receive: fun(any,any):string|nil,string|nil,string|nil} A tcp socket
