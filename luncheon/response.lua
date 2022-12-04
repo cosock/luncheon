@@ -10,23 +10,22 @@ local shared = require 'luncheon.shared'
 ---@field public headers Headers The HTTP headers for this response
 ---@field public body string the contents of the response body
 ---@field public status number The HTTP status 3 digit number
----@filed public status_msg string The HTTP status message
+---@field public status_msg string The HTTP status message
 ---@field public http_version string
 ---@field public socket table The socket to send/receive on
----@field private _source fun(pat:string|nil):string ltn12 source
+---@field private _source fun(pat:string|number|nil):string
 ---@field private _parsed_headers boolean
 ---@field private _received_body boolean
 local Response = {}
 Response.__index = Response
 
---#endregion
 --#region Parser
 
 
----Create a request parser from an ltn12 source function
----@param source fun():string
----@return Response
----@return string @if return 1 is nil the error string
+---Create a request parser from a source function
+---@param source fun(pat:string|number|nil):string|nil,string|nil,string|nil
+---@return Response|nil
+---@return nil|string error if return 1 is nil the error string
 function Response.source(source)
     local ret = setmetatable({
         headers = Headers.new(),
@@ -50,7 +49,8 @@ end
 
 ---Create a response from a lua socket tcp socket
 ---@param socket table tcp socket
----@return Response
+---@return Response|nil
+---@return nil|string
 function Response.tcp_source(socket)
     local utils = require 'luncheon.utils'
     local ret, err = Response.source(
@@ -65,7 +65,8 @@ end
 
 ---Create a response from a lua socket udp socket
 ---@param socket table udp socket
----@return Response
+---@return Response|nil
+---@return nil|string
 function Response.udp_source(socket)
     local utils = require 'luncheon.utils'
     local ret, err =  Response.source(
@@ -216,7 +217,8 @@ function Response:set_content_length(len)
 end
 
 ---Serialize this full response into a string
----@return string
+---@return string|nil
+---@return nil|string
 function Response:serialize()
     return shared.SharedLogic.serialize(self)
 end
@@ -241,8 +243,9 @@ function Response:append_body(s)
 end
 
 ---Set the status for this outgoing request
----@param n number the 3 digit status
----@return Response
+---@param n number|string the 3 digit status
+---@return Response|nil response
+---@return nil|string error
 function Response:set_status(n)
     if type(n) == 'string' then
         n = math.tointeger(n)
@@ -266,8 +269,8 @@ end
 --#region sink
 
 ---Serialize and pass the first line of this Request into the sink
----@return integer if not nil, success
----@return string if not nil and error message
+---@return integer|nil success
+---@return string|nil err
 function Response:send_preamble()
     if self._send_state.stage ~= 'none' then
         return 1 --already sent
@@ -283,7 +286,7 @@ end
 
 ---Pass a single header line into the sink functions
 ---@return integer|nil If not nil, then successfully "sent"
----@return string If not nil, the error message
+---@return nil|string If not nil, the error message
 function Response:send_header()
     if self._send_state.stage == 'none' then
         return self:send_preamble()
@@ -315,7 +318,7 @@ end
 ---Slice a chunk of at most 1024 bytes from `self.body` and pass it to
 ---the sink
 ---@return integer|nil if not nil, success
----@return string if not nil and error message
+---@return nil|string if not nil and error message
 function Response:send_body_chunk()
     if self._send_state.stage ~= 'body' then
         return self:send_header()
@@ -334,7 +337,7 @@ end
 ---Serialize and pass the request chunks into the sink
 ---@param bytes string|nil the final bytes to append to the body
 ---@return integer|nil If not nil sent successfully
----@return string if not nil the error message
+---@return nil|string if not nil the error message
 function Response:send(bytes, skip_length)
     if bytes then
         self.body = self.body .. bytes

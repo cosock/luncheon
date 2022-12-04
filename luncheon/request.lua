@@ -13,7 +13,7 @@ local shared = require 'luncheon.shared'
 ---@field public headers Headers The HTTP headers for this request
 ---@field public body string The contents of the request's body
 ---@field public socket table Lua socket for receiving/sending
----@field private _source fun():string ltn12 source
+---@field private _source fun(pat:string|number|nil):string
 ---@field private _parsed_headers boolean
 ---@field private _received_body boolean
 ---@field public mode Mode
@@ -24,7 +24,8 @@ Request.__index = Request
 
 ---Parse the first line of an HTTP request
 ---@param line string
----@return table
+---@return {method:string,url:table,http_version:string}|nil table
+---@return nil|string
 function Request._parse_preamble(line)
     local start, _, method, path, http_version = string.find(line, '([A-Z]+) (.+) HTTP/([0-9.]+)')
     if not start then
@@ -39,9 +40,10 @@ function Request._parse_preamble(line)
     }
 end
 
----Construct a request from a ltn12 source function
----@param source fun():string this should always return a single line when called
----@return Request
+---Construct a request from a source function
+---@param source fun(string|number|nil):string|nil,nil|string
+---@return Request|nil request
+---@return nil|string error
 function Request.source(source)
     if not source then
         return nil, 'cannot create request with nil source'
@@ -68,7 +70,8 @@ end
 
 ---Create a new Request with a lua socket
 ---@param socket table tcp socket
----@return Request
+---@return Request|nil request with the first line parsed
+---@return nil|string if not nil an error message
 function Request.tcp_source(socket)
     local utils = require 'luncheon.utils'
     local ret, err = Request.source(
@@ -83,7 +86,8 @@ end
 
 ---Create a new Request with a lua socket
 ---@param socket table udp socket
----@return Request, string|nil
+---@return Request|nil
+---@return nil|string
 function Request.udp_source(socket)
     local utils = require 'luncheon.utils'
     local ret, err =  Request.source(
@@ -99,7 +103,8 @@ end
 ---Get the headers for this request
 ---parsing the incoming stream of headers
 ---if not already parsed
----@return Headers, string|nil
+---@return Headers|nil
+---@return string|nil
 function Request:get_headers()
     return shared.SharedLogic.get_headers(self)
 end
@@ -130,9 +135,9 @@ end
 
 --#region Builder
 ---Construct a request Builder
----@param method string an http method string
----@param url string|table the path for this request as a string or as a net_url table
----@param socket table
+---@param method string|nil an http method string
+---@param url string|table|nil the path for this request as a string or as a net_url table
+---@param socket table|nil
 ---@return Request
 function Request.new(method, url, socket)
     if type(url) == 'string' then
@@ -235,7 +240,8 @@ function Request:_serialize_preamble()
 end
 
 ---Serialize this request into a single string
----@return string
+---@return string|nil
+---@return nil|string
 function Request:serialize()
     return shared.SharedLogic.serialize(self)
 end
@@ -253,8 +259,8 @@ end
 --#region sink
 
 ---Serialize and pass the first line of this Request into the sink
----@return integer if not nil, success
----@return string if not nil and error message
+---@return integer|nil if not nil, success
+---@return nil|string if not nil and error message
 function Request:send_preamble()
     if self._send_state.stage ~= 'none' then
         return 1 --already sent
@@ -270,7 +276,7 @@ end
 
 ---Pass a single header line into the sink functions
 ---@return integer|nil If not nil, then successfully "sent"
----@return string If not nil, the error message
+---@return nil|string If not nil, the error message
 function Request:send_header()
     if self._send_state.stage == 'none' then
         return self:send_preamble()
@@ -302,7 +308,7 @@ end
 ---Slice a chunk of at most 1024 bytes from `self.body` and pass it to
 ---the sink
 ---@return integer|nil if not nil, success
----@return string if not nil and error message
+---@return nil|string if not nil and error message
 function Request:send_body_chunk()
     if self._send_state.stage ~= 'body' then
         return self:send_header()
@@ -321,7 +327,7 @@ end
 ---Serialize and pass the request chunks into the sink
 ---@param bytes string|nil the final bytes to append to the body
 ---@return integer|nil If not nil sent successfully
----@return string if not nil the error message
+---@return nil|string if not nil the error message
 function Request:send(bytes, skip_length)
     if bytes then
         self.body = self.body .. bytes
@@ -336,10 +342,6 @@ function Request:send(bytes, skip_length)
         end
     end
     return 1
-end
-
-function Request:_sending_body()
-    return self._send_state.stage == 'body'
 end
 
 --#endregion
