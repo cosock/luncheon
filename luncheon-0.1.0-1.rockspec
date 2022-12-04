@@ -1,8 +1,8 @@
 package = "luncheon"
-version = "0.1.0-1"
+version = "0.2.0-1"
 source = {
    url = "git://github.com/cosock/luncheon",
-   tag = "v0.1.0-1"
+   tag = "v0.2.0-1"
 }
 description = {
    homepage = "https://github.com/cosock/luncheon",
@@ -18,6 +18,7 @@ build = {
       ["luncheon.headers"] = "luncheon/headers.lua",
       ["luncheon.request"] = "luncheon/request.lua",
       ["luncheon.response"] = "luncheon/response.lua",
+      ["luncheon.shared"] = "luncheon/shared.lua",
       ["luncheon.status"] = "luncheon/status.lua",
       ["luncheon.utils"] = "luncheon/utils.lua",
    }
