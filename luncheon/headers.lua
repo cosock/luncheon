@@ -29,11 +29,15 @@ end
 
 ---Serialize a key value pair
 ---@param key string
----@param value string
+---@param value string|string[]
 ---@return string
 function Headers.serialize_header(key, value)
     if type(value) == 'table' then
-        value = value[#value]
+        local serialized = {}
+        for _, v in ipairs(value) do
+            table.insert(serialized, Headers.serialize_header(key, v))
+        end
+        return table.concat(serialized, '\r\n')
     end
     -- special case for MD5
     key = string.gsub(key, 'md5', 'mD5')
@@ -82,14 +86,19 @@ end
 
 ---Constructor for a Headers instance with the provided text
 ---@param text string
----@return Headers
+---@return Headers|nil
+---@return nil|string
 function Headers.from_chunk(text)
     local headers = Headers.new()
-    headers:append_chunk(text)
+    local s, err = headers:append_chunk(text)
+    if not s then
+        return nil, err
+    end
     return headers
 end
 
 ---Bare constructor
+---@return Headers
 function Headers.new()
     local ret = {
         _inner = {},
@@ -109,13 +118,21 @@ function Headers.normalize_key(key)
     return normalized
 end
 
----Insert a single key value pair to the collection
+---Insert a single key value pair to the collection will duplicate existing keys
 ---@param key string
 ---@param value string
 ---@return Headers
 function Headers:append(key, value)
     key = Headers.normalize_key(key)
     _append(self._inner, key, value)
+    self._last_key = key
+    return self
+end
+
+---Insert a single key value pair to the collection will not duplicate keys
+function Headers:replace(key, value)
+    key = Headers.normalize_key(key)
+    self._inner[key] = value
     self._last_key = key
     return self
 end
