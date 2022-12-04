@@ -19,7 +19,7 @@ jobs:
       - name: Sphinx Build
         uses: ammaraskar/sphinx-action@0.4
         with:
-          build-command: sphinx-build -b html ./predocs ./docs
+          build-command: "sphinx-build -b html ./predocs ./docs"
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
