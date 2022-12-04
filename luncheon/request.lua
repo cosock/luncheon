@@ -112,7 +112,7 @@ end
 ---Read a single line from the socket
 ---@return string|nil, string|nil
 function Request:_next_line()
-    local line, err = self._source()
+    local line, err = self._source('*l')
     return line, err
 end
 
