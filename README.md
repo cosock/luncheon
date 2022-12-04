@@ -20,8 +20,9 @@ build them.
 ### Parsing
 
 Both `Request` and `Response` expose a constructor `source`, which expects the only argument to be a
-function that returns a single line of the request when called. So a simple example of that might
-look like this.
+function that will return a line when called (at least until the end of the headers
+[see the source docs for more details](https://cosock.github.io/luncheon/source.html)). So a simple
+example of that might look like this.
 
 ```lua
 local Request = 'luncheon.request'
@@ -94,7 +95,7 @@ incoming HTTP `Request`s and echo them back out as `Response`s.
 Request = require 'luncheon.request'
 Response = require 'luncheon.response'
 utils = require 'luncheon.utils'
-socket = require 'socket' --luasocket
+socket = require 'socket'
 tcp = assert(socket.tcp())
 assert(tcp:bind('0.0.0.0', 8080))
 assert(tcp:listen())
@@ -105,7 +106,7 @@ while true do
   print('url', req.url.path)
   print('method', req.method)
   print('body', req:get_body())
-  local res = Response.new(200, utils.buffered_socket_sink(incoming))
+  local res = Response.new(200, incoming)
     :add_header('Server', 'Luncheon Echo Server')
     :append_body(req:get_body())
     :send()
@@ -113,4 +114,4 @@ while true do
 end
 ```
 
-See the [examples](/examples) directory for more
+See the [examples](https://github.com/cosock/luncheon/tree/main/examples) directory for more
