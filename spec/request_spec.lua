@@ -2,27 +2,27 @@ local Request = require 'luncheon.request'
 local MockSocket = require 'spec.mock_socket'.MockSocket
 local normal_headers = require 'spec.normal_headers'
 local utils = require 'luncheon.utils'
+local shared= require 'luncheon.shared'
 
 describe('Request', function()
     describe('parse_preamble', function()
         it('GET / HTTP/1.1 should work', function()
-            local r, e = Request._parse_preamble('GET / HTTP/1.1')
-            assert(e == nil)
-            assert(r.method == 'GET')
-            assert(r.url.path == '/')
-            assert(r.http_version == '1.1')
+            local r = assert(Request._parse_preamble('GET / HTTP/1.1'))
+            assert.are.equal('GET', r.method)
+            assert.are.equal('/', r.url.path)
+            assert.are.equal('1.1', r.http_version)
         end)
         it('GET /things HTTP/2 should work', function()
-            local r, e = Request._parse_preamble('GET /things HTTP/2')
-            assert(r.method == 'GET', 'expected method to be GET')
-            assert(r.url.path == '/things', 'expected path to be /things')
-            assert(r.http_version == '2', 'expected version to be 2')
+            local r = assert(Request._parse_preamble('GET /things HTTP/2'))
+            assert.are.equal('GET', r.method)
+            assert.are.equal('/things', r.url.path)
+            assert.are.equal('2', r.http_version)
         end)
         it('POST /stuff HTTP/2 should work', function()
-            local r, e = Request._parse_preamble('POST /stuff HTTP/2')
-            assert(r.method == 'POST', 'expected method to be POST')
-            assert(r.url.path == '/stuff', 'expected path to be /stuff')
-            assert(r.http_version == '2', 'expected version to be 2')
+            local r = assert(Request._parse_preamble('POST /stuff HTTP/2'))
+            assert.are.equal('POST', r.method)
+            assert.are.equal('/stuff', r.url.path)
+            assert.are.equal('2', r.http_version)
         end)
         it('bad request', function()
             local _, e = Request._parse_preamble('')
@@ -36,8 +36,7 @@ describe('Request', function()
                 table.insert(inner, set[1])
             end
             table.insert(inner, '')
-            local r, e = Request.source(utils.tcp_socket_source(MockSocket.new(inner)))
-            assert(e == nil, string.format('error in Request.from: %s', e))
+            local r= assert(Request.source(utils.tcp_socket_source(MockSocket.new(inner))))
             local headers, e2 = r:get_headers()
             assert(e2 == nil, string.format('error in get_headers %s', e2))
             assert(headers, string.format('headers was nil'))
@@ -64,9 +63,8 @@ describe('Request', function()
                 '',
                 'asdfg',
             }
-            local r, e = Request.source(utils.tcp_socket_source(MockSocket.new(lines)))
-            assert(e == nil, 'error parsing preamble ' .. (e or 'nil'))
-            local e2 = r:_fill_body()
+            local r = assert(Request.source(utils.tcp_socket_source(MockSocket.new(lines))))
+            local e2 = shared.SharedLogic.fill_body(r)
             assert(e2 == nil, 'error parsing body: ' .. (e2 or 'nil'))
             assert.are.equal('asdfg', r.body)
         end)
@@ -77,18 +75,15 @@ describe('Request', function()
                 '',
                 'asdfg',
             }
-            local r, e = Request.source(utils.tcp_socket_source(MockSocket.new(lines)))
-            assert(e == nil, 'error parsing preamble ' .. (e or 'nil'))
-            local b, e2 = r:get_body()
-            assert(e2 == nil, 'error parsing body: ' .. (e2 or 'nil'))
-            assert(b == 'asdfg', 'Expected asdfg, found ' .. (r._body or 'nil'))
+            local r = assert(Request.source(utils.tcp_socket_source(MockSocket.new(lines))))
+            local b = assert(r:get_body())
+            assert.are.equal('asdfg', b)
         end)
-        it('get_body fails', function()
+        it('get_body fails #b', function()
             local lines = {
                 'POST / HTTP/1.1 should work',
             }
-            local r, e = Request.source(utils.tcp_socket_source(MockSocket.new(lines)))
-            assert.is.falsy(e)
+            local r = assert(Request.source(utils.tcp_socket_source(MockSocket.new(lines))))
             local b, e2 = r:get_body()
             assert.is.falsy(b)
             assert.is.equal('empty', e2)
@@ -98,9 +93,8 @@ describe('Request', function()
                 'POST / HTTP/1.1 should work',
                 '',
             }
-            local r, e = Request.source(utils.tcp_socket_source(MockSocket.new(lines)))
-            assert.is.falsy(e)
-            assert.is.falsy(r:content_length())
+            local r, e = assert(Request.source(utils.tcp_socket_source(MockSocket.new(lines))))
+            assert(not r:get_content_length())
         end)
         it('content-length bad', function ()
             local lines = {
@@ -108,15 +102,14 @@ describe('Request', function()
                 'Content-Length: a',
                 ''
             }
-            local r, e = Request.source(utils.tcp_socket_source(MockSocket.new(lines)))
-            assert(e == nil, e)
-            assert.is.falsy(r:content_length())
+            local r = assert(Request.source(utils.tcp_socket_source(MockSocket.new(lines))))
+            assert.is.falsy(r:get_content_length())
         end)
     end)
     describe('Manual Construction', function ()
-        it('serialize works', function ()
-            local r = Request.new('GET', '/'):set_content_type('application/json'):append_body('{}')
-            local ser = r:serialize()
+        it('serialize works #a', function ()
+            local r = assert(Request.new('GET', '/'):set_content_type('application/json'):append_body('{}'))
+            local ser = assert(r:serialize())
             assert(string.find(ser, '^GET / HTTP/1%.1\r\n'), 'Preamble missing\n"' .. ser .. '"')
             assert(string.find(ser, 'Content%-Type: application/json\r\n'), 'CT missing\n"' .. ser .. '"')
             assert(string.find(ser, 'Content%-Length: 2\r\n'), 'CL missing\n"' .. ser .. '"')
@@ -142,7 +135,7 @@ describe('Request', function()
                 line_n = line_n + 1
             end
         end)
-        it('as_source works with a multi-line body', function ()
+        it('iter works with a multi-line body', function ()
             local r = Request.new('GET', '/'):set_content_type('application/json'):append_body(
                 'one\n'
             ):append_body('two\n')
@@ -166,7 +159,7 @@ describe('Request', function()
                 line_n = line_n + 1
             end
         end)
-        it('serialize works', function ()
+        it('builder serialize works', function ()
             local r = Request.new('GET', '/'):append_body(
                 'one\n'
             ):append_body('two\n')
@@ -181,10 +174,26 @@ describe('Request', function()
             })
             assert.are.same(expected, r:serialize())
         end)
+        it('source serialize works', function()
+            local body = 'one\ntwo\nthree'
+            local lines = {
+                'GET / HTTP/1.1',
+                string.format('Content-Length: %s', #body),
+                '',
+                body
+            }
+            local sock = MockSocket.new(lines)
+            local expected = table.concat(lines, '\r\n')
+            local r = assert(Request.tcp_source(sock))
+            local result = assert(r:serialize())
+            assert.are.same(expected
+            , result)
+        end)
         it('serialize_path works', function ()
             local path_str = '/endpoint?asdf=2&qwer=3'
             local r = Request.new('GET', path_str)
             assert.are.equal(r:_serialize_path(), path_str)
+            ---@diagnostic disable-next-line: assign-type-mismatch
             r.url = path_str
             assert.are.equal(r:_serialize_path(), path_str)
         end)
@@ -195,7 +204,8 @@ describe('Request', function()
         end)
     end)
     it('source fails with nil source', function ()
-        local r, err = Request.source(nil)
+---@diagnostic disable-next-line: missing-parameter
+        local r, err = Request.source()
         assert.is.falsy(r)
         assert.are.equal('cannot create request with nil source', err)
     end)
