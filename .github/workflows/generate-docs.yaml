@@ -1,9 +1,9 @@
 name: GitHub Pages
 
 on:
-  push:
+  pull_request:
     branches:
-      - misc-fixes
+      - main
 
 jobs:
   deploy:
