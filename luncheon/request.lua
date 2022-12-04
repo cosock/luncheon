@@ -161,16 +161,38 @@ end
 ---@param value string The Header's value
 ---@return Request
 function Request:add_header(key, value)
+    if type(value) ~= 'string' then
+        value = tostring(value)
+    end
     self.headers:append(key, value)
+    return self
+end
+
+---Replace or append a header to the internal headers map
+---
+---note: this is additive, though the _last_ value is used during
+---serialization
+---@param key string
+---@param value any If not a string will call tostring
+---@return Request
+function Request:replace_header(key, value)
+    if type(value) ~= 'string' then
+        value = tostring(value)
+    end
+    self.headers:replace(key, value)
     return self
 end
 
 ---Set the Content-Type header for this request
 ---convenience wrapper around self:add_header('content_type', len)
 ---@param ct string The mime type to add as the Content-Type header's value
----@return Request
+---@return Request|nil
+---@return nil|string
 function Request:set_content_type(ct)
-    self:add_header('content_type', ct)
+    if type(ct) ~= 'string' then
+        return nil, string.format('mime type must be a string, found %s', type(ct))
+    end
+    self:replace_header('content_type', ct)
     return self
 end
 
@@ -179,7 +201,7 @@ end
 ---@param len number The Expected length of the body
 ---@return Request
 function Request:set_content_length(len)
-    self:add_header('content_length', len)
+    self:replace_header('content_length', tostring(len))
     return self
 end
 
