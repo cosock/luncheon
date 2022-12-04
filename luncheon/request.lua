@@ -59,7 +59,7 @@ function Request.source(source)
         return nil, acc_err
     end
     local pre, pre_err = Request._parse_preamble(line)
-    if pre_err then
+    if not pre then
         return nil, pre_err
     end
     r.http_version = pre.http_version
@@ -146,7 +146,7 @@ function Request.new(method, url, socket)
     return setmetatable({
         method = string.upper(method or 'GET'),
         url = url or net_url.parse('/'),
-        headers = Headers.new({content_length = 0}),
+        headers = Headers.new(),
         http_version = '1.1',
         body = '',
         socket = socket,
@@ -284,6 +284,7 @@ function Request:send_header()
     if self._send_state.stage == 'body' then
         return nil, 'cannot send headers after body'
     end
+    ---@diagnostic disable-next-line: invisible
     local key, value = next(self.headers._inner, self._send_state.last_header)
     if not key then
         local s, e = utils.send_all(self.socket, '\r\n')

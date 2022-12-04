@@ -248,12 +248,13 @@ end
 ---@return nil|string error
 function Response:set_status(n)
     if type(n) == 'string' then
-        n = math.tointeger(n)
+        n = math.tointeger(n) or n
     end
     if type(n) ~= 'number' then
         return nil, string.format('http status must be a number, found %s', type(n))
     end
     self.status = n
+    self.status_msg = statuses[n] or ''
     return self
 end
 
@@ -294,6 +295,7 @@ function Response:send_header()
     if self._send_state.stage == 'body' then
         return nil, 'cannot send headers after body'
     end
+    ---@diagnostic disable-next-line: invisible
     local key, value = next(self.headers._inner, self._send_state.last_header)
     if not key then
         local s, e = utils.send_all(self.socket, '\r\n')
