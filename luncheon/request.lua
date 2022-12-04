@@ -16,6 +16,7 @@ local shared = require 'luncheon.shared'
 ---@field private _source fun():string ltn12 source
 ---@field private _parsed_headers boolean
 ---@field private _received_body boolean
+---@field public mode Mode
 local Request = {}
 Request.__index = Request
 

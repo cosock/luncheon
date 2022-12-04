@@ -32,6 +32,7 @@ function Response.source(source)
         headers = Headers.new(),
         _source = source,
         _parsed_headers = false,
+        mode = shared.Mode.Incoming,
     }, Response)
     local line, err = ret:next_line()
     if not line then
@@ -228,14 +229,6 @@ function Response:_serialize_preamble()
         self.status,
         statuses[self.status] or ''
     )
-end
-
----Create the string representing the pre-body entries for
----this request. including the 2 trailing \r\n
----@return string
-function Response:_generate_prebody()
-    return self:_generate_preamble() .. '\r\n'
-        .. self.headers:serialize() .. '\r\n'
 end
 
 ---Append text to the body
