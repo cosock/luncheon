@@ -13,9 +13,9 @@ while true do
     print('error', err)
     break
   end
-  local req = lunch.Request.tcp_source(
+  local req = assert(lunch.Request.tcp_source(
     incoming
-  )
+  ))
   print('into request')
   print('url', req.url.path)
   print('method', req.method)
@@ -24,7 +24,7 @@ while true do
     :set_content_length(math.tointeger(req:get_headers().content_length or 0) or 0))
     :append_body(req:get_body())
   print('into response')
-  for part in res:as_source() do
+  for part in res:iter() do
     print('sending', string.format('%q', part))
     assert(lunch.utils.send_all(incoming, part))
   end
