@@ -87,7 +87,7 @@ end
 function Response._parse_preamble(line)
     local version, status, msg = string.match(line, 'HTTP/([0-9.]+) ([^%s]+) (.+)')
     if not version then
-        return nil, string.format('invalid preamble: %q', line)
+        return nil, string.format('Invalid http response first line: %q', line)
     end
     return {
         http_version = tonumber(version),
