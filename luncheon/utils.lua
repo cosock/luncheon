@@ -18,7 +18,7 @@ function m.send_all(sock, s)
     local target = #s
     local retries = 0
     while total_sent < target and retries < 5 do
-        local res = table.pack(pcall(sock.send, sock, string.sub(s, total_sent)))
+        local res = table.pack(pcall(sock.send, sock, string.sub(s, total_sent+1)))
         if not res[1] then
             retries = retries + 1
         else

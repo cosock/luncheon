@@ -175,8 +175,7 @@ end
 
 ---Replace or append a header to the internal headers map
 ---
----note: this is additive, though the _last_ value is used during
----serialization
+---note: this is not additive, any existing value will be lost
 ---@param key string
 ---@param value any If not a string will call tostring
 ---@return Request
@@ -189,7 +188,7 @@ function Request:replace_header(key, value)
 end
 
 ---Set the Content-Type header for this request
----convenience wrapper around self:add_header('content_type', len)
+---convenience wrapper around self:replace_header('content_type', len)
 ---@param ct string The mime type to add as the Content-Type header's value
 ---@return Request|nil
 ---@return nil|string
@@ -202,7 +201,7 @@ function Request:set_content_type(ct)
 end
 
 ---Set the Content-Length header for this request
----convenience wrapper around self:add_header('content_length', len)
+---convenience wrapper around self:replace_header('content_length', len)
 ---@param len number The Expected length of the body
 ---@return Request
 function Request:set_content_length(len)
@@ -262,48 +261,14 @@ end
 ---@return integer|nil if not nil, success
 ---@return nil|string if not nil and error message
 function Request:send_preamble()
-    if self._send_state.stage ~= 'none' then
-        return 1 --already sent
-    end
-    local line = self:_serialize_preamble() .. '\r\n'
-    local s, err = utils.send_all(self.socket, line)
-    if not s then
-        return nil, err
-    end
-    self._send_state.stage = 'header'
-    return 1
+    return shared.SharedLogic.send_preamble(self)
 end
 
 ---Pass a single header line into the sink functions
 ---@return integer|nil If not nil, then successfully "sent"
 ---@return nil|string If not nil, the error message
 function Request:send_header()
-    if self._send_state.stage == 'none' then
-        return self:send_preamble()
-    end
-    if self._send_state.stage == 'body' then
-        return nil, 'cannot send headers after body'
-    end
-    ---@diagnostic disable-next-line: invisible
-    local key, value = next(self.headers._inner, self._send_state.last_header)
-    if not key then
-        local s, e = utils.send_all(self.socket, '\r\n')
-        if not s then
-            return nil, e
-        end
-        self._send_state = {
-            stage = 'body',
-            sent = 0,
-        }
-        return 1
-    end
-    local line = Headers.serialize_header(key, value) .. '\r\n'
-    local s, e = utils.send_all(self.socket, line)
-    if not s then
-        return nil, e
-    end
-    self._send_state.last_header = key
-    return 1
+    return shared.SharedLogic.send_header(self)
 end
 
 ---Slice a chunk of at most 1024 bytes from `self.body` and pass it to
@@ -311,18 +276,7 @@ end
 ---@return integer|nil if not nil, success
 ---@return nil|string if not nil and error message
 function Request:send_body_chunk()
-    if self._send_state.stage ~= 'body' then
-        return self:send_header()
-    end
-    local start_idx = self._send_state.sent + 1
-    local end_idx = start_idx + 1024
-    local chunk = self.body:sub(start_idx, end_idx)
-    local s, e = utils.send_all(self.socket, chunk)
-    if not s then
-        return nil, e
-    end
-    self._send_state.sent = self._send_state.sent + #chunk
-    return 1
+    return shared.SharedLogic.send_body_chunk(self)
 end
 
 ---Serialize and pass the request chunks into the sink
@@ -330,20 +284,7 @@ end
 ---@return integer|nil If not nil sent successfully
 ---@return nil|string if not nil the error message
 function Request:send(bytes, skip_length)
-    if bytes then
-        self.body = self.body .. bytes
-    end
-    if self._send_state.stage ~= 'body' and not skip_length then
-        self:set_content_length(#self.body)
-    end
-    while self._send_state.stage ~= 'body'
-    or (self._send_state.sent or 0) < #self.body do
-        local s, e = self:send_body_chunk()
-        if not s then
-            return nil, e
-        end
-    end
-    return 1
+    return shared.SharedLogic.send(self, bytes, skip_length)
 end
 
 --#endregion

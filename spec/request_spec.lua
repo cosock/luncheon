@@ -225,10 +225,8 @@ describe('Request', function()
             local socket = MockSocket.new()
             local r = Request.new('GET', '/', socket)
             r:send('body')
-            assert.are.equal('GET / HTTP/1.1\r\n', socket.inner[1])
-            assert.are.equal('Content-Length: 4\r\n', socket.inner[2])
-            assert.are.equal('\r\n', socket.inner[3])
-            assert.are.equal('body', socket.inner[4])
+            local all_sent = table.concat(socket.inner, "")
+            assert.are.equal("GET / HTTP/1.1\r\nContent-Length: 4\r\n\r\nbody", all_sent)
         end)
         it('does not duplicate preamble', function()
             local socket = MockSocket.new()
@@ -289,10 +287,26 @@ describe('Request', function()
         end)
         it('send forwards errors', function()
             local socket = MockSocket.new({}, {'error'})
-            local ct = 0
             local s, e = Request.new('GET', '/', socket):send('asdf')
             assert.is.falsy(s)
             assert.are.equal('error', e)
+        end)
+        it('incoming iter works', function()
+            local socket = MockSocket.new({
+                "GET / HTTP/1.1",
+                "Content-Length: 13",
+                "",
+                "1234567890",
+                "123"
+            })
+            local r = assert(Request.tcp_source(socket))
+            local iter = r:iter()
+            assert.are.same("GET / HTTP/1.1\r\n", iter())
+            assert.are.same("Content-Length: 13\r\n", iter())
+            assert.are.same("\r\n", iter())
+            assert.are.same("1234567890", iter())
+            assert.are.same("123", iter())
+            
         end)
     end)
 end)

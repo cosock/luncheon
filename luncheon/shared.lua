@@ -189,7 +189,7 @@ function SharedLogic.iter(self)
         end
         if state == 'body' then
             if self.mode == Mode.Incoming then
-                local line, err = self._next_line()
+                local line, err = self:_next_line()
                 if err == 'closed' or not line then
                     state = 'complete'
                     return nil
@@ -213,6 +213,137 @@ function SharedLogic.iter(self)
             return value
         end
     end
+end
+
+---Send the first line of the Request|Response
+---@param self Request|Response
+---@return integer|nil
+---@return string|nil
+function SharedLogic.send_preamble(self)
+    if self._send_state.stage ~= 'none' then
+        return 1 --already sent
+    end
+    local line = self:_serialize_preamble() .. '\r\n'
+    local s, err = utils.send_all(self.socket, line)
+    if not s then
+        return nil, err
+    end
+    self._send_state.stage = 'header'
+    return 1
+end
+
+---Collect the preamble and headers to the provided limit
+---@param self Request|Response
+---@param max integer
+---@return string
+---@return integer
+function SharedLogic.build_chunk(self, max)
+    local buf = ""
+    if self._send_state.stage == "none" then
+        buf = self:_serialize_preamble() .. "\r\n"
+        self._send_state.stage = "header"
+    end
+    if #buf >= max then
+        return buf, 0
+    end
+    ---@diagnostic disable-next-line: invisible
+    local inner_headers = self.headers._inner
+    while self._send_state.stage == "header" do
+        local key, value = next(inner_headers, self._send_state.last_header)
+        if not key then
+            buf = buf .. "\r\n"
+            self._send_state = {
+                stage = 'body',
+                sent = 0,
+            }
+            break
+        end
+        local line = Headers.serialize_header(key, value) .. '\r\n'
+        if #line + #buf > max then
+            return buf, 0
+        end
+        self._send_state.last_header = key
+        buf = buf .. line
+    end
+    local body_len = 0
+    if #buf < max then
+        body_len = max - #buf
+        local start_idx = self._send_state.sent + 1
+        local end_idx = start_idx + body_len
+        local chunk = string.sub(self.body, start_idx, end_idx)
+        body_len = #chunk
+        buf = buf .. chunk
+    end
+    return buf, body_len
+end
+
+---Pass a single header line into the sink functions
+---@param self Request|Response
+---@return integer|nil If not nil, then successfully "sent"
+---@return nil|string If not nil, the error message
+function SharedLogic.send_header(self)
+    if self._send_state.stage == 'none' then
+        return self:send_preamble()
+    end
+    if self._send_state.stage == 'body' then
+        return nil, 'cannot send headers after body'
+    end
+    ---@diagnostic disable-next-line: invisible
+    local key, value = next(self.headers._inner, self._send_state.last_header)
+    if not key then
+        local s, e = utils.send_all(self.socket, '\r\n')
+        if not s then
+            return nil, e
+        end
+        self._send_state = {
+            stage = 'body',
+            sent = 0,
+        }
+        return 1
+    end
+    local line = Headers.serialize_header(key, value) .. '\r\n'
+    local s, e = utils.send_all(self.socket, line)
+    if not s then
+        return nil, e
+    end
+    self._send_state.last_header = key
+    return 1
+end
+
+---Slice a chunk of at most 1024 bytes from `self.body` and pass it to
+---the sink
+---@return integer|nil if not nil, success
+---@return nil|string if not nil and error message
+function SharedLogic.send_body_chunk(self)
+    local chunk, body_len = SharedLogic.build_chunk(self, 1024)
+    local s, e, i = utils.send_all(self.socket, chunk)
+    if not s then
+        return nil, e
+    end
+    self._send_state.sent = self._send_state.sent + body_len
+    return 1
+end
+
+---Final send of a request or response
+---@param self Request|Response
+---@param bytes string|nil
+---@param skip_length boolean|nil
+function SharedLogic.send(self, bytes, skip_length)
+    if bytes then
+        self.body = self.body .. bytes
+    end
+    if self._send_state.stage ~= 'body' and not skip_length then
+        self:set_content_length(#self.body)
+    end
+    while self._send_state.stage ~= 'body'
+        or (self._send_state.sent or 0) < #self.body do
+            
+        local s, e = SharedLogic.send_body_chunk(self)
+        if not s then
+            return nil, e
+        end
+    end
+    return 1
 end
 
 return {
