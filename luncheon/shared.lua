@@ -13,9 +13,6 @@ local Mode = {
 }
 local SharedLogic = {}
 
----@alias Interface {mode:"incoming"|"outgoing", _fill_headers: (fun(Interface):nil|string),_fill_body: (fun(Interface):nil|string),_serialize_preamble: (fun(Interface): string|nil,nil|string), get_headers:(fun(Inteface):Headers|nil,nil|string), get_body: (fun(Inteface): string|nil,nil|string)}
-
-
 ---@param self Request|Response
 ---@return boolean|nil
 ---@return nil|string
@@ -30,7 +27,10 @@ function SharedLogic.parse_header(self)
     if line == '' then
         return true
     else
-        self.headers:append_chunk(line)
+        local s, e = self.headers:append_chunk(line)
+        if not s then
+            return nil, e
+        end
     end
     return false
 end
@@ -76,21 +76,127 @@ function SharedLogic.get_content_length(self)
     return self._content_length
 end
 
+---Determine what type of body we are dealing with
+---@param self Request|Response
+---@return table|nil
+---@return nil|string
+function SharedLogic.body_type(self)
+    local len, headers, enc, err
+    len, err = SharedLogic.get_content_length(self)
+    if not len and err then
+        return nil, err
+    end
+    if len then
+        return {
+            type = "length",
+            length = len
+        }
+    end
+    headers, err = self:get_headers()
+    if not headers then
+        return nil, err
+    end
+
+    enc, err = headers:get_all("Transfer-Encoding")
+    if not enc then
+        return nil, err
+    end
+    for _, v in ipairs(enc) do
+        if string.match(v, "chunked") then
+            return {
+                type = "chunked"
+            }
+        end
+    end
+    return {
+        type = "close"
+    }
+end
+
+---fill a content-length or close body
+---@param self Request|Response
+---@param len integer|nil
+---@return string|nil
+---@return nil|string
+function SharedLogic.fill_len_or_close_body(self, len)
+    ---@diagnostic disable-next-line: invisible
+    local body, err = self._source(len or "*a")
+    if not body then
+        return nil, err
+    end
+    return body
+end
+
+---@param self Request|Response
+---@return string|nil
+---@return nil|string
+function SharedLogic.fill_chunked_body_step(self)
+    -- read chunk length with tailing new lines
+    ---@diagnostic disable-next-line: invisible
+    local len, err = self._source(3)
+    if not len then
+        return nil, err
+    end
+    local trimmed = string.sub(len, 1, 1)
+    if trimmed == "0" then
+        -- clear the last new line pair
+        ---@diagnostic disable-next-line: invisible
+        self._source(2)
+        return nil, "___eof___"
+    end
+    local len2 = tonumber(trimmed, 16)
+    if not len2 then
+        return nil, "invalid number for chunk length"
+    end
+    ---@diagnostic disable-next-line: invisible
+    local chunk, err = self._source(len2)
+    if not chunk then
+        return nil, err
+    end
+    -- clear new line
+    ---@diagnostic disable-next-line: invisible
+    self._source(2)
+    return chunk
+end
+
+---@param self Request|Response
+---@return string|nil
+---@return nil|string
+---@return nil|string
+function SharedLogic.fill_chunked_body(self)
+    local ret, chunk, err = "", nil, nil
+    repeat
+        chunk, err = SharedLogic.fill_chunked_body_step(self)
+        ret = ret .. (chunk or "")
+    until err
+    if err == "___eof___" then
+        return ret
+    end
+    return nil, err, ret
+end
+
 ---
 ---@param self Request|Response
 ---@return nil|string
 function SharedLogic.fill_body(self)
     if self.mode == Mode.Incoming
     ---@diagnostic disable-next-line: invisible
-    and not self._received_body then
-        local len, err = SharedLogic.get_content_length(self)
-        if err ~= nil then
+        and not self._received_body then
+        local ty, err = SharedLogic.body_type(self)
+        if not ty then
             return err
         end
-        ---@diagnostic disable-next-line: invisible
-        local body, err = self._source(len or '*a')
-        if not body then
-            return err
+        local body, err
+        if ty.type == "close" or ty.type == "length" then
+            body, err = SharedLogic.fill_len_or_close_body(self, ty.length)
+            if not body then
+                return err
+            end
+        else
+            body, err = SharedLogic.fill_chunked_body(self)
+            if not body then
+                return err
+            end
         end
         self.body = body
         ---@diagnostic disable-next-line: invisible
@@ -173,7 +279,7 @@ function SharedLogic.iter(self)
     local state = 'start'
     local suffix = '\r\n'
     local header_iter = self:get_headers():iter()
-    local value, body
+    local value, body, body_type, err
     return function()
         if state == 'start' then
             state = 'headers'
@@ -189,6 +295,20 @@ function SharedLogic.iter(self)
         end
         if state == 'body' then
             if self.mode == Mode.Incoming then
+                if not body_type then
+                    body_type, err = SharedLogic.body_type(self)
+                    if not body_type then
+                        return nil, err
+                    end
+                end
+                if body_type.type == "chunked" then
+                    local chunk, err = SharedLogic.fill_chunked_body_step(self)
+                    if err == "___eof___" then
+                        state = 'complete'
+                        return nil
+                    end
+                    return chunk, err
+                end
                 local line, err = self:_next_line()
                 if err == 'closed' or not line then
                     state = 'complete'
