@@ -133,6 +133,9 @@ function Headers:append(key, value)
 end
 
 ---Insert a single key value pair to the collection will not duplicate keys
+---@param key string
+---@param value string
+---@return Headers
 function Headers:replace(key, value)
     key = Headers.normalize_key(key)
     self._inner[key] = value
@@ -178,6 +181,7 @@ function Headers:get_all(key)
 end
 
 ---Return a lua iterator over the key/value pairs in this header map
+---@return function():string|nil
 function Headers:iter()
     local last = nil
     return function ()
