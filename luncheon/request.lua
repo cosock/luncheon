@@ -131,6 +131,11 @@ function Request:get_content_length()
     return shared.SharedLogic.get_content_length(self)
 end
 
+---@deprecated see get_content_length
+function Request:content_length()
+    return self:get_content_length()
+end
+
 --#endregion Parser
 
 --#region Builder
