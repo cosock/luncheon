@@ -67,22 +67,34 @@ function Headers:serialize()
     return ret
 end
 
----Append a chunk of headers to this map
----@param text string
-function Headers:append_chunk(text)
-    if text == nil then
-        return nil, 'nil header'
-    end
-    if string.match(text, '^%s+') ~= nil then
+function Headers:_handle_single_line(line)
+    if string.match(line, '^%s+') ~= nil then
         if not self._last_key then
             return nil, 'Header continuation with no key'
         end
         local existing = self:get_one(self._last_key)
-        self._inner[self._last_key] = string.format('%s %s', existing, text)
+        self._inner[self._last_key] = string.format('%s %s', existing, string.sub(line, 2))
         return 1
     end
-    for raw_key, value in string.gmatch(text, '([^%c()<>@,;:\\"/%[%]?={} \t]+): (.+);?') do
+    for raw_key, value in string.gmatch(line, '([^%c()<>@,;:\\"/%[%]?={} \t]+): (.+);?') do
         self:append(raw_key, value)
+    end
+    return 1
+end
+
+---Append a chunk of headers to this map
+---@param text string
+---@return integer|nil success 1 if successful
+---@return nil|string err if ret1 is `nil` an error message
+function Headers:append_chunk(text)
+    if type(text) ~= 'string' then
+        return nil, 'invalid header, expected string found ' .. type(text)
+    end
+  for chunk in string.gmatch(text, "([^\r\n]+)") do
+        local s, err = self:_handle_single_line(chunk)    
+        if not s then
+            return nil, err
+        end
     end
     return 1
 end
