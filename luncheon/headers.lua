@@ -27,9 +27,12 @@ local function _append(t, key, value)
     end
 end
 
----Serialize a key value pair
+---Serialize a key value pair w/o the trailing new line
+---
+--- If the provided value is a `string[]`, it will be joined with `\r\n` into one
+--- string, though no trailing new line will be provided
 ---@param key string
----@param value string|string[]
+---@param value string
 ---@return string
 function Headers.serialize_header(key, value)
     if type(value) == 'table' then
