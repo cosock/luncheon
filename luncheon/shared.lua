@@ -1,5 +1,6 @@
 local Headers = require "luncheon.headers"
 local utils = require "luncheon.utils"
+local log = require "log"
 
 ---@enum Mode
 --- Enumeration of the 2 sources of data

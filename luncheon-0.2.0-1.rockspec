@@ -9,7 +9,8 @@ description = {
    license = "MIT"
 }
 dependencies = {
-   "net-url >= 0.9",
+  "net-url >= 0.9",
+   "logface >= 0.0.2"
 }
 build = {
    type = "builtin",
