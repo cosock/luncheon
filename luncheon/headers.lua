@@ -32,7 +32,7 @@ end
 --- If the provided value is a `string[]`, it will be joined with `\r\n` into one
 --- string, though no trailing new line will be provided
 ---@param key string
----@param value string
+---@param value string|string[]
 ---@return string
 function Headers.serialize_header(key, value)
     if type(value) == 'table' then
