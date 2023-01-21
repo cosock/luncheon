@@ -132,13 +132,16 @@ end
 ---@return string|nil
 ---@return nil|string
 function SharedLogic.fill_chunked_body_step(self)
-    -- read chunk length with tailing new lines
+    -- read chunk length with trailing new lines
     ---@diagnostic disable-next-line: invisible
-    local len, err = self._source(3)
+    local len, err = self._source("*l")
     if not len then
         return nil, err
     end
-    local trimmed = string.sub(len, 1, 1)
+    local trimmed = string.match(len, "^[^;]+")
+    for extension in string.gmatch(len, ";([^;]+)") do
+        log.warn(string.format("found unsupported extension: %q", extension))
+    end
     if trimmed == "0" then
         -- clear the last new line pair
         ---@diagnostic disable-next-line: invisible
