@@ -1,3 +1,4 @@
+---@diagnostic disable: invisible
 local Headers = require "luncheon.headers"
 local utils = require "luncheon.utils"
 local log = require "log"
@@ -14,21 +15,53 @@ local Mode = {
 }
 local SharedLogic = {}
 
+---Append a header to the `Headers` with the matching name
 ---@param self Request|Response
+---@param k string
+---@param v string|any
+---@param name string
+function SharedLogic.append_header(self, k, v, name)
+    if not self[name] then
+        self[name] = Headers.new()
+    end
+    if type(v) ~= 'string' then
+        v = tostring(v)
+    end
+    self[name]:append(k, v)
+end
+
+---Append a header to the `Headers` with the matching name
+---@param self Request|Response
+---@param k string
+---@param v string|any
+---@param name string
+function SharedLogic.replace_header(self, k, v, name)
+    if not self[name] then
+        self[name] = Headers.new()
+    end
+    if type(v) ~= 'string' then
+        v = tostring(v)
+    end
+    self[name]:replace(k, v)
+end
+
+---@param self Request|Response
+---@param key string|nil The header map key to use, defaults to "headers"
 ---@return boolean|nil
 ---@return nil|string
-function SharedLogic.parse_header(self)
+function SharedLogic.read_header(self, key)
+    key = key or "headers"
     local line, err = self:_next_line()
     if not line then
         return nil, err
     end
-    if self.headers == nil then
-        self.headers = Headers.new()
+    if self[key] == nil then
+        self[key] = Headers.new()
     end
     if line == '' then
         return true
     else
-        local s, e = self.headers:append_chunk(line)
+        local s, e = self[key]:append_chunk(line)
         if not s then
             return nil, e
         end
@@ -39,19 +72,19 @@ end
 ---
 ---@param self Request|Response
 ---@return string|nil
-function SharedLogic.fill_headers(self)
-    ---@diagnostic disable-next-line: invisible
-    if self._parsed_headers then
+function SharedLogic.fill_headers(self, key)
+    key = key or "headers"
+    local parsed_key = string.format("_parsed_%s", key)
+    if self[parsed_key] then
         return
     end
     while true do
-        local done, err = SharedLogic.parse_header(self)
+        local done, err = SharedLogic.read_header(self, key)
         if err ~= nil then
             return err
         end
         if done then
-            ---@diagnostic disable-next-line: invisible
-            self._parsed_headers = true
+            self[parsed_key] = true
             return
         end
     end
@@ -59,11 +92,10 @@ end
 
 function SharedLogic.get_content_length(self)
     if not self._parsed_headers then
-        local err = SharedLogic.fill_headers(self)
+        local err = SharedLogic.fill_headers(self, "headers")
         if err then return nil, err end
     end
     if not self._content_length then
-        assert(self.headers, debug.traceback())
         local cl = self.headers:get_one('content_length')
         if not cl then
             return
@@ -101,16 +133,22 @@ function SharedLogic.body_type(self)
     enc, err = headers:get_all("Transfer-Encoding")
     if not enc then
         return nil, err
-    end
+  end
+    local ty = "close"
     for _, v in ipairs(enc) do
         if string.match(v, "chunked") then
-            return {
-                type = "chunked"
-            }
+            ty = "chunked"
+            break
         end
     end
+    local trailers = false
+    if ty == "chunked" then
+        local trailer = headers:get_all("trailer")
+        trailers = trailer and #trailer > 0 and #trailer[1] > 0
+    end
     return {
-        type = "close"
+        type = ty,
+        trailers = trailers
     }
 end
 
@@ -120,7 +158,7 @@ end
 ---@return string|nil
 ---@return nil|string
 function SharedLogic.fill_len_or_close_body(self, len)
-    ---@diagnostic disable-next-line: invisible
+
     local body, err = self._source(len or "*a")
     if not body then
         return nil, err
@@ -133,7 +171,7 @@ end
 ---@return nil|string
 function SharedLogic.fill_chunked_body_step(self)
     -- read chunk length with trailing new lines
-    ---@diagnostic disable-next-line: invisible
+
     local len, err = self._source("*l")
     if not len then
         return nil, err
@@ -143,22 +181,18 @@ function SharedLogic.fill_chunked_body_step(self)
         log.warn(string.format("found unsupported extension: %q", extension))
     end
     if trimmed == "0" then
-        -- clear the last new line pair
-        ---@diagnostic disable-next-line: invisible
-        self._source(2)
         return nil, "___eof___"
     end
     local len2 = tonumber(trimmed, 16)
     if not len2 then
         return nil, "invalid number for chunk length"
     end
-    ---@diagnostic disable-next-line: invisible
+
     local chunk, err = self._source(len2)
     if not chunk then
         return nil, err
     end
     -- clear new line
-    ---@diagnostic disable-next-line: invisible
     self._source(2)
     return chunk
 end
@@ -179,12 +213,32 @@ function SharedLogic.fill_chunked_body(self)
     return nil, err, ret
 end
 
+---Check for trailers and add them to the headers if present
+---this should only be called when chunked encoding has been detected
+---@param self table
+function SharedLogic.check_for_trailers(self)
+    local headers, err = self:get_headers()
+    if not headers then
+        return nil, err
+    end
+    local trailer = headers:get_all("trailer")
+    for _, _header_name in ipairs(trailer or {}) do
+        local done, err = SharedLogic.read_header(self, "trailers")
+        if done then
+            break
+        end
+        if err ~= nil then
+            return nil, err
+        end
+    end
+    return 1
+end
+
 ---
 ---@param self Request|Response
 ---@return nil|string
 function SharedLogic.fill_body(self)
     if self.mode == Mode.Incoming
-    ---@diagnostic disable-next-line: invisible
         and not self._received_body then
         local ty, err = SharedLogic.body_type(self)
         if not ty then
@@ -198,13 +252,14 @@ function SharedLogic.fill_body(self)
             end
         else
             body, err = SharedLogic.fill_chunked_body(self)
+            SharedLogic.check_for_trailers(self)
             if not body then
                 return err
             end
         end
         self.body = body
-        ---@diagnostic disable-next-line: invisible
         self._received_body = true
+        
     end
 end
 
@@ -224,7 +279,6 @@ end
 ---@return Headers|nil
 ---@return nil|string
 function SharedLogic.get_headers(self)
-    ---@diagnostic disable-next-line: invisible
     if self.mode == Mode.Incoming and not self._parsed_headers then
         local err = SharedLogic.fill_headers(self)
         if err ~= nil then
@@ -283,7 +337,7 @@ function SharedLogic.iter(self)
     local state = 'start'
     local suffix = '\r\n'
     local header_iter = self:get_headers():iter()
-    local value, body, body_type, err
+    local value, body, body_type, err, trailers_iter
     return function()
         if state == 'start' then
             state = 'headers'
@@ -308,6 +362,17 @@ function SharedLogic.iter(self)
                 if body_type.type == "chunked" then
                     local chunk, err = SharedLogic.fill_chunked_body_step(self)
                     if err == "___eof___" then
+                        if body_type.trailers then
+                            state = 'trailers'
+                            SharedLogic.fill_headers(self, "trailers")
+                            if self.trailers then
+                                trailers_iter = self.trailers:iter()
+                                local trailer = trailers_iter()
+                                if trailer then
+                                    return trailer .. suffix
+                                end
+                            end
+                        end
                         state = 'complete'
                         return nil
                     end
@@ -320,7 +385,6 @@ function SharedLogic.iter(self)
                 end
                 return line, err
             end
-            
             if not body then
                 local b, err = self:get_body()
                 if not b then
@@ -335,6 +399,18 @@ function SharedLogic.iter(self)
                 return body
             end
             return value
+        end
+        if state == "trailers" then
+            if not trailers_iter then
+                state = 'complete'
+                return nil
+            end
+            local trailer = trailers_iter()
+            if not trailer then
+                state = 'complete'
+                return nil
+            end
+            return trailer .. suffix
         end
     end
 end
@@ -365,17 +441,18 @@ function SharedLogic.build_chunk(self, max)
     local buf = ""
     if self._send_state.stage == "none" then
         buf = self:_serialize_preamble() .. "\r\n"
+
         self._send_state.stage = "header"
     end
     if #buf >= max then
         return buf, 0
     end
-    ---@diagnostic disable-next-line: invisible
     local inner_headers = self.headers._inner
     while self._send_state.stage == "header" do
         local key, value = next(inner_headers, self._send_state.last_header)
         if not key then
             buf = buf .. "\r\n"
+
             self._send_state = {
                 stage = 'body',
                 sent = 0,
@@ -412,7 +489,6 @@ function SharedLogic.send_header(self)
     if self._send_state.stage == 'body' then
         return nil, 'cannot send headers after body'
     end
-    ---@diagnostic disable-next-line: invisible
     local key, value = next(self.headers._inner, self._send_state.last_header)
     if not key then
         local s, e = utils.send_all(self.socket, '\r\n')

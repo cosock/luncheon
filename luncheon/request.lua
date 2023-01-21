@@ -13,10 +13,12 @@ local shared = require 'luncheon.shared'
 ---@field public headers Headers The HTTP headers for this request
 ---@field public body string The contents of the request's body
 ---@field public socket table Lua socket for receiving/sending
+---@field private _send_state {stage: string, sent: integer}
 ---@field private _source fun(pat:string|number|nil):string
 ---@field private _parsed_headers boolean
 ---@field private _received_body boolean
 ---@field public mode Mode
+---@field public trailers Headers|nil The HTTP trailers
 local Request = {}
 Request.__index = Request
 
@@ -171,10 +173,7 @@ end
 ---@param value string The Header's value
 ---@return Request
 function Request:add_header(key, value)
-    if type(value) ~= 'string' then
-        value = tostring(value)
-    end
-    self.headers:append(key, value)
+    shared.SharedLogic.append_header(self, key, value, "headers")
     return self
 end
 
@@ -185,10 +184,7 @@ end
 ---@param value any If not a string will call tostring
 ---@return Request
 function Request:replace_header(key, value)
-    if type(value) ~= 'string' then
-        value = tostring(value)
-    end
-    self.headers:replace(key, value)
+    shared.SharedLogic.replace_header(self, key, value, "headers")
     return self
 end
 

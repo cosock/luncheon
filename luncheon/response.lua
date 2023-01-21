@@ -16,7 +16,9 @@ local shared = require 'luncheon.shared'
 ---@field private _source fun(pat:string|number|nil):string
 ---@field private _parsed_headers boolean
 ---@field private _received_body boolean
----@field private _send_state {stage: string}
+---@field private _send_state {stage: string, sent: integer}
+---@field public mode Mode
+---@field public trailers Headers|nil The HTTP trailers
 local Response = {}
 Response.__index = Response
 
@@ -173,10 +175,7 @@ end
 ---@param value any If not a string will call tostring
 ---@return Response
 function Response:add_header(key, value)
-    if type(value) ~= 'string' then
-        value = tostring(value)
-    end
-    self.headers:append(key, value)
+    shared.SharedLogic.append_header(self, key, value, "headers")
     return self
 end
 
@@ -187,10 +186,7 @@ end
 ---@param value any If not a string will call tostring
 ---@return Response
 function Response:replace_header(key, value)
-    if type(value) ~= 'string' then
-        value = tostring(value)
-    end
-    self.headers:replace(key, value)
+    shared.SharedLogic.replace_header(self, key, value, "headers")
     return self
 end
 
