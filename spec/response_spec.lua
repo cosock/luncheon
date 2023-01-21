@@ -320,14 +320,21 @@ describe('Response', function()
         end)
     end)
     describe("chunk encoding #enc", function()
-        local test_utils = require "spec.test_utils"
         
         it("get_body works", function()
+            local test_utils = require "spec.test_utils"
             local r = assert(Response.source(test_utils.create_chunked_source(test_utils.wikipedia_chunks.response)))
-            local b, _err = r:get_body()
+            local b = assert(r:get_body())
             assert.are.equal(test_utils.wikipedia_chunks.assert_body, b or nil)
         end)
+        it("large chunks works", function()
+            local test_utils = require "spec.test_utils"
+            local r = assert(Response.source(test_utils.create_chunked_source(test_utils.large_chunks.response)))
+            local b = assert(r:get_body())
+            assert.are.equal(test_utils.large_chunks.assert_body, b or nil)
+        end)
         it("iter works", function()
+            local test_utils = require "spec.test_utils"
             local r = assert(Response.source(test_utils.create_chunked_source(test_utils.wikipedia_chunks.response)))
             local iter = r:iter()
             assert.are.same("HTTP/1.1 200 OK\r\n", iter())

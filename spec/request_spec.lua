@@ -109,13 +109,13 @@ describe('Request', function()
     describe('Manual Construction', function()
         it('add_header calls tostring with non-string', function()
             local r = Request.new("GET", "/")
-                :add_header("some key", 1)
+            :add_header("some key", 1)
             
             assert.are.same("1", r:get_headers():get_one("some key"))
         end)
         it('replace_header calls tostring with non-string', function()
             local r = Request.new("GET", "/")
-                :replace_header("some key", 1)
+            :replace_header("some key", 1)
             
             assert.are.same("1", r:get_headers():get_one("some key"))
         end)
@@ -154,211 +154,258 @@ describe('Request', function()
         end)
         it('iter works with a multi-line body', function ()
             local r = Request.new('GET', '/'):set_content_type('application/json'):append_body(
-                'one\n'
-            ):append_body('two\n')
-            :append_body('three')
-            local expected_lines = {
-                'GET / HTTP/1.1\r\n',
-                'Content-Length: 13\r\n',
-                'Content-Type: application/json\r\n',
-                '\r\n',
-                'one\n',
-                'two\n',
-                'three',
-            }
-            local line_n = 1
-            for line in r:iter() do
-                if line_n > 1 and line_n < 4 then
-                    assert(line == expected_lines[2] or line == expected_lines[3], string.format('line: %q\n2: %q\n3: %q', line, expected_lines[2], expected_lines[3]))
-                else
-                    assert(expected_lines[line_n] == line, string.format('%s %q ~= %q', line_n, expected_lines[line_n], line))
-                end
-                line_n = line_n + 1
+            'one\n'
+        ):append_body('two\n')
+        :append_body('three')
+        local expected_lines = {
+            'GET / HTTP/1.1\r\n',
+            'Content-Length: 13\r\n',
+            'Content-Type: application/json\r\n',
+            '\r\n',
+            'one\n',
+            'two\n',
+            'three',
+        }
+        local line_n = 1
+        for line in r:iter() do
+            if line_n > 1 and line_n < 4 then
+                assert(line == expected_lines[2] or line == expected_lines[3], string.format('line: %q\n2: %q\n3: %q', line, expected_lines[2], expected_lines[3]))
+            else
+                assert(expected_lines[line_n] == line, string.format('%s %q ~= %q', line_n, expected_lines[line_n], line))
             end
-        end)
-        it('builder serialize works', function ()
-            local r = Request.new('GET', '/'):append_body(
-                'one\n'
-            ):append_body('two\n')
-            :append_body('three')
-            local expected = table.concat({
-                'GET / HTTP/1.1\r\n',
-                'Content-Length: 13\r\n',
-                '\r\n',
-                'one\n',
-                'two\n',
-                'three',
-            })
-            assert.are.same(expected, r:serialize())
-        end)
-        it('source serialize works', function()
-            local body = 'one\ntwo\nthree'
-            local lines = {
-                'GET / HTTP/1.1',
-                string.format('Content-Length: %s', #body),
-                '',
-                body
-            }
-            local sock = MockSocket.new(lines)
-            local expected = table.concat(lines, '\r\n')
-            local r = assert(Request.tcp_source(sock))
-            local result = assert(r:serialize())
-            assert.are.same(expected
-            , result)
-        end)
-        it('serialize_path works', function ()
-            local path_str = '/endpoint?asdf=2&qwer=3'
-            local r = Request.new('GET', path_str)
-            assert.are.equal(r:_serialize_path(), path_str)
-            ---@diagnostic disable-next-line: assign-type-mismatch
-            r.url = path_str
-            assert.are.equal(r:_serialize_path(), path_str)
-        end)
-        it('set_content_length', function ()
-            local r = Request.new('GET', '/')
-            r.headers.content_length = nil
-            assert(r:set_content_length(10))
-        end)
+            line_n = line_n + 1
+        end
     end)
-    it('source fails with nil source', function ()
----@diagnostic disable-next-line: missing-parameter
-        local r, err = Request.source()
-        assert.is.falsy(r)
-        assert.are.equal('cannot create request with nil source', err)
-    end)
+    it('builder serialize works', function ()
+        local r = Request.new('GET', '/'):append_body(
+        'one\n'
+    ):append_body('two\n')
+    :append_body('three')
+    local expected = table.concat({
+        'GET / HTTP/1.1\r\n',
+        'Content-Length: 13\r\n',
+        '\r\n',
+        'one\n',
+        'two\n',
+        'three',
+    })
+    assert.are.same(expected, r:serialize())
+end)
+it('source serialize works', function()
+    local body = 'one\ntwo\nthree'
+    local lines = {
+        'GET / HTTP/1.1',
+        string.format('Content-Length: %s', #body),
+        '',
+        body
+    }
+    local sock = MockSocket.new(lines)
+    local expected = table.concat(lines, '\r\n')
+    local r = assert(Request.tcp_source(sock))
+    local result = assert(r:serialize())
+    assert.are.same(expected
+    , result)
+end)
+it('serialize_path works', function ()
+    local path_str = '/endpoint?asdf=2&qwer=3'
+    local r = Request.new('GET', path_str)
+    assert.are.equal(r:_serialize_path(), path_str)
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    r.url = path_str
+    assert.are.equal(r:_serialize_path(), path_str)
+end)
+it('set_content_length', function ()
+    local r = Request.new('GET', '/')
+    r.headers.content_length = nil
+    assert(r:set_content_length(10))
+end)
+end)
+it('source fails with nil source', function ()
+    ---@diagnostic disable-next-line: missing-parameter
+    local r, err = Request.source()
+    assert.is.falsy(r)
+    assert.are.equal('cannot create request with nil source', err)
+end)
 
-    it('source fails with empty socket', function ()
-        local r, err = Request.source(utils.tcp_socket_source(MockSocket.new({})))
-        assert.is.falsy(r)
-        assert.are.equal('empty', err)
+it('source fails with empty socket', function ()
+    local r, err = Request.source(utils.tcp_socket_source(MockSocket.new({})))
+    assert.is.falsy(r)
+    assert.are.equal('empty', err)
+end)
+it('source fails with bad pre', function ()
+    local r, err = Request.source(utils.tcp_socket_source(MockSocket.new({'junk'})))
+    assert.is.falsy(r)
+    assert.are.equal('Invalid http request first line: "junk"', err)
+end)
+describe('sink', function()
+    it('can send', function()
+        local socket = MockSocket.new()
+        local r = Request.new('GET', '/', socket)
+        r:send('body')
+        local all_sent = table.concat(socket.inner, "")
+        assert.are.equal("GET / HTTP/1.1\r\nContent-Length: 4\r\n\r\nbody", all_sent)
     end)
-    it('source fails with bad pre', function ()
-        local r, err = Request.source(utils.tcp_socket_source(MockSocket.new({'junk'})))
-        assert.is.falsy(r)
-        assert.are.equal('Invalid http request first line: "junk"', err)
+    it('does not duplicate preamble', function()
+        local socket = MockSocket.new()
+        local r = Request.new('GET', '/', socket)
+        r:send_preamble()
+        r:send_preamble()
+        assert.are.equal('GET / HTTP/1.1\r\n', socket.inner[1])
+        assert.are.equal(1, #socket.inner)
     end)
-    describe('sink', function()
-        it('can send', function()
-            local socket = MockSocket.new()
-            local r = Request.new('GET', '/', socket)
-            r:send('body')
-            local all_sent = table.concat(socket.inner, "")
-            assert.are.equal("GET / HTTP/1.1\r\nContent-Length: 4\r\n\r\nbody", all_sent)
-        end)
-        it('does not duplicate preamble', function()
-            local socket = MockSocket.new()
-            local r = Request.new('GET', '/', socket)
-            r:send_preamble()
-            r:send_preamble()
-            assert.are.equal('GET / HTTP/1.1\r\n', socket.inner[1])
-            assert.are.equal(1, #socket.inner)
-        end)
-        it('send_preamble forwards errors', function()
-            local socket = MockSocket.new({}, {'error'})
-            local r = Request.new('GET', '/', socket)
-            local s, e = r:send_preamble()
-            assert.is.falsy(s)
-            assert.are.equal('error', e)
-        end)
-        it('send_header forwards errors', function()
-            local socket = MockSocket.new()
-            local ct = 0
-            local r = Request.new('GET', '/', socket)
-            assert(r:send_preamble())
-            table.insert(socket.send_errs, 'error')
-            local s, e = r:send_header()
-            assert.is.falsy(s)
-            assert.are.equal('error', e)
-        end)
-        it('send_header forwards errors deeper', function()
-            local socket = MockSocket.new({}, {})
-            local ct = 0
-            local r = Request.new('GET', '/', socket):add_header('X-A-Header', 'yes')
-            assert(r:send_preamble())
-            table.insert(socket.send_errs, 'error')
-            local s, e = r:send_header()
-            assert.is.falsy(s)
-            assert.are.equal('error', e)
-        end)
-        it('cannot send headers after body', function()
-            local socket = MockSocket.new()
-            local r = Request.new('GET', '/', socket)
-            assert(r:send('asdf'))
-            local s, e = r:send_header()
-            assert.is.falsy(s)
-            assert.are.equal('cannot send headers after body', e)
-        end)
-        it('send_body_chunk forwards errors', function ()
-            local socket = MockSocket.new({}, {})
-            local r = Request.new('GET', '/', socket)
-                :add_header('X-A-Header', 'yes')
-                :append_body('asdf')
-            assert(r:send_preamble())
-            assert(r:send_header())
-            assert(r:send_header())
-            assert(r:send_header())
-            table.insert(socket.send_errs, 'error')
-            local s, e = r:send_body_chunk()
-            assert.is.falsy(s)
-            assert.are.equal('error', e)
-        end)
-        it('send forwards errors', function()
-            local socket = MockSocket.new({}, {'error'})
-            local s, e = Request.new('GET', '/', socket):send('asdf')
-            assert.is.falsy(s)
-            assert.are.equal('error', e)
-        end)
-        it('incoming iter works', function()
-            local socket = MockSocket.new({
-                "GET / HTTP/1.1",
-                "Content-Length: 13",
-                "",
-                "1234567890",
-                "123"
-            })
-            local r = assert(Request.tcp_source(socket))
-            local iter = r:iter()
-            assert.are.same("GET / HTTP/1.1\r\n", iter())
-            assert.are.same("Content-Length: 13\r\n", iter())
-            assert.are.same("\r\n", iter())
-            assert.are.same("1234567890", iter())
-            assert.are.same("123", iter())
-            
-        end)
+    it('send_preamble forwards errors', function()
+        local socket = MockSocket.new({}, {'error'})
+        local r = Request.new('GET', '/', socket)
+        local s, e = r:send_preamble()
+        assert.is.falsy(s)
+        assert.are.equal('error', e)
     end)
-    describe("Request.*_source", function()
-        it("tcp source works", function()
-            assert(Request.tcp_source(MockSocket.new({ "GET / HTTP/1.1\r\n" })))
-        end)
-        it("udp source works", function()
-            assert(Request.udp_source(MockSocket.new({ "GET / HTTP/1.1\r\n" })))
-        end)
-        it("tcp error bad preamble", function()
-            local _, err = Request.tcp_source(MockSocket.new({ "junk" }))
-            assert.are.same("Invalid http request first line: \"junk\"", err)
-        end)
-        it("udp error bad preamble", function()
-            local _, err = Request.udp_source(MockSocket.new({ "junk" }))
-            assert.are.same("empty", err)
-        end)
+    it('send_header forwards errors', function()
+        local socket = MockSocket.new()
+        local ct = 0
+        local r = Request.new('GET', '/', socket)
+        assert(r:send_preamble())
+        table.insert(socket.send_errs, 'error')
+        local s, e = r:send_header()
+        assert.is.falsy(s)
+        assert.are.equal('error', e)
     end)
-    describe("chunk encoding #enc", function()
-        local test_utils = require "spec.test_utils"
+    it('send_header forwards errors deeper', function()
+        local socket = MockSocket.new({}, {})
+        local ct = 0
+        local r = Request.new('GET', '/', socket):add_header('X-A-Header', 'yes')
+        assert(r:send_preamble())
+        table.insert(socket.send_errs, 'error')
+        local s, e = r:send_header()
+        assert.is.falsy(s)
+        assert.are.equal('error', e)
+    end)
+    it('cannot send headers after body', function()
+        local socket = MockSocket.new()
+        local r = Request.new('GET', '/', socket)
+        assert(r:send('asdf'))
+        local s, e = r:send_header()
+        assert.is.falsy(s)
+        assert.are.equal('cannot send headers after body', e)
+    end)
+    it('send_body_chunk forwards errors', function ()
+        local socket = MockSocket.new({}, {})
+        local r = Request.new('GET', '/', socket)
+        :add_header('X-A-Header', 'yes')
+        :append_body('asdf')
+        assert(r:send_preamble())
+        assert(r:send_header())
+        assert(r:send_header())
+        assert(r:send_header())
+        table.insert(socket.send_errs, 'error')
+        local s, e = r:send_body_chunk()
+        assert.is.falsy(s)
+        assert.are.equal('error', e)
+    end)
+    it('send forwards errors', function()
+        local socket = MockSocket.new({}, {'error'})
+        local s, e = Request.new('GET', '/', socket):send('asdf')
+        assert.is.falsy(s)
+        assert.are.equal('error', e)
+    end)
+    it('incoming iter works', function()
+        local socket = MockSocket.new({
+            "GET / HTTP/1.1",
+            "Content-Length: 13",
+            "",
+            "1234567890",
+            "123"
+        })
+        local r = assert(Request.tcp_source(socket))
+        local iter = r:iter()
+        assert.are.same("GET / HTTP/1.1\r\n", iter())
+        assert.are.same("Content-Length: 13\r\n", iter())
+        assert.are.same("\r\n", iter())
+        assert.are.same("1234567890", iter())
+        assert.are.same("123", iter())
         
-        it("get_body works", function()
-            local r = assert(Request.source(test_utils.create_chunked_source(test_utils.wikipedia_chunks.request)))
-            local b, _err = r:get_body()
-            assert.are.equal(test_utils.wikipedia_chunks.assert_body, b or nil)
-        end)
-        it("iter works", function()
-            local r = assert(Request.source(test_utils.create_chunked_source(test_utils.wikipedia_chunks.request)))
-            local iter = r:iter()
-            assert.are.same("GET / HTTP/1.1\r\n", iter())
-            assert.are.same("Transfer-Encoding: chunked\r\n", iter())
-            assert.are.same("\r\n", iter())
-            assert.are.same("Wiki", iter())
-            assert.are.same("pedia ", iter())
-            assert.are.same("in \r\n\r\nchunks.", iter())
-        end)
     end)
+end)
+describe("Request.*_source", function()
+    it("tcp source works", function()
+        assert(Request.tcp_source(MockSocket.new({ "GET / HTTP/1.1\r\n" })))
+    end)
+    it("udp source works", function()
+        assert(Request.udp_source(MockSocket.new({ "GET / HTTP/1.1\r\n" })))
+    end)
+    it("tcp error bad preamble", function()
+        local _, err = Request.tcp_source(MockSocket.new({ "junk" }))
+        assert.are.same("Invalid http request first line: \"junk\"", err)
+    end)
+    it("udp error bad preamble", function()
+        local _, err = Request.udp_source(MockSocket.new({ "junk" }))
+        assert.are.same("empty", err)
+    end)
+end)
+describe("chunk encoding #enc", function()
+    local test_utils = require "spec.test_utils"
+    
+    it("get_body works", function()
+        local r = assert(Request.source(test_utils.create_chunked_source(test_utils.wikipedia_chunks.request)))
+        local b = assert(r:get_body())
+        assert.are.equal(test_utils.wikipedia_chunks.assert_body, b or nil)
+    end)
+    it("large chunks works", function()
+        local r = assert(Request.source(test_utils.create_chunked_source(test_utils.large_chunks.request)))
+        local b = assert(r:get_body())
+        assert.are.equal(test_utils.large_chunks.assert_body, b or nil)
+    end)
+    it("extensions works", function()
+        local r = assert(Request.source(test_utils.create_chunked_source(test_utils.extended.request)))
+        local b = assert(r:get_body())
+        assert.are.equal(test_utils.extended.assert_body, b or nil)
+    end)
+    it("trailers works", function()
+        local r = assert(Request.source(test_utils.create_chunked_source(test_utils.trailers.request)))
+        local headers = assert(r:get_headers())
+        assert.are.equal(nil, headers:get_one("Date") or nil)
+        local b = assert(r:get_body())
+        assert.are.equal(test_utils.trailers.assert_body, b or nil)
+        assert.are.equal("Today", r.trailers:get_one("Date") or nil)
+    end)
+    it("iter works", function()
+        local r = assert(Request.source(test_utils.create_chunked_source(test_utils.wikipedia_chunks.request)))
+        local iter = r:iter()
+        assert.are.same("GET / HTTP/1.1\r\n", iter())
+        assert.are.same("Transfer-Encoding: chunked\r\n", iter())
+        assert.are.same("\r\n", iter())
+        assert.are.same("Wiki", iter())
+        assert.are.same("pedia ", iter())
+        assert.are.same("in \r\n\r\nchunks.", iter())
+    end)
+    it("iter works with trailers", function()
+        local r = assert(Request.source(test_utils.create_chunked_source(test_utils.trailers.request)))
+        local iter = r:iter()
+        assert.are.same("GET /trailers HTTP/1.1\r\n", iter())
+        
+        local header_set = {
+            ["Trailer: Date,Junk\r\n"] = true,
+            ["Transfer-Encoding: chunked\r\n"] = true
+        }
+        local header1 = assert(iter())
+        test_utils.assert_in_set(header_set, header1)
+        -- assert(header_set[header1], string.format("Expected header1 to be Trailers or Junk found %q", header1))
+        -- header_set[header1] = nil
+        local header2 = assert(iter())
+        test_utils.assert_in_set(header_set, header2)
+        -- assert(header_set[header2], string.format("Expected header2 to be Trailers or Junk found %q", header2))
+        -- header_set[header2] = nil
+        assert.are.same("\r\n", iter())
+        assert.are.same("the message will have extra headers", iter())
+        assert.are.same("after it", iter())
+        local trailer_set = {
+            ["Date: Today\r\n"] = true,
+            ["Junk: This is a junk header!\r\n"] = true
+        }
+        local trailer1 = assert(iter())
+        test_utils.assert_in_set(trailer_set, trailer1)
+        local trailer2 = assert(iter())
+        test_utils.assert_in_set(trailer_set, trailer2)
+    end)
+end)
 end)
