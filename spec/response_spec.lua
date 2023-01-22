@@ -320,21 +320,18 @@ describe('Response', function()
         end)
     end)
     describe("chunk encoding #enc", function()
-        
+        local test_utils = require "spec.test_utils"
         it("get_body works", function()
-            local test_utils = require "spec.test_utils"
             local r = assert(Response.source(test_utils.create_chunked_source(test_utils.wikipedia_chunks.response)))
             local b = assert(r:get_body())
             assert.are.equal(test_utils.wikipedia_chunks.assert_body, b or nil)
         end)
         it("large chunks works", function()
-            local test_utils = require "spec.test_utils"
             local r = assert(Response.source(test_utils.create_chunked_source(test_utils.large_chunks.response)))
             local b = assert(r:get_body())
             assert.are.equal(test_utils.large_chunks.assert_body, b or nil)
         end)
         it("iter works", function()
-            local test_utils = require "spec.test_utils"
             local r = assert(Response.source(test_utils.create_chunked_source(test_utils.wikipedia_chunks.response)))
             local iter = r:iter()
             assert.are.same("HTTP/1.1 200 OK\r\n", iter())
@@ -343,6 +340,48 @@ describe('Response', function()
             assert.are.same("Wiki", iter())
             assert.are.same("pedia ", iter())
             assert.are.same("in \r\n\r\nchunks.", iter())
+        end)
+        it("extensions works", function()
+            local r = assert(Response.source(test_utils.create_chunked_source(test_utils.extended.response)))
+            local b = assert(r:get_body())
+            assert.are.equal(test_utils.extended.assert_body, b or nil)
+        end)
+        it("trailers works", function()
+            local r = assert(Response.source(test_utils.create_chunked_source(test_utils.trailers.response)))
+            local headers = assert(r:get_headers())
+            assert.are.equal(nil, headers:get_one("Date") or nil)
+            local b = assert(r:get_body())
+            assert.are.equal(test_utils.trailers.assert_body, b or nil)
+            assert.are.equal("Today", r.trailers:get_one("Date") or nil)
+        end)
+        it("iter works with trailers", function()
+            local r = assert(Response.source(test_utils.create_chunked_source(test_utils.trailers.response)))
+            local iter = r:iter()
+            assert.are.same("HTTP/1.1 200 OK\r\n", iter())
+
+            local header_set = {
+                ["Trailer: Date,Junk\r\n"] = true,
+                ["Transfer-Encoding: chunked\r\n"] = true
+            }
+            local header1 = assert(iter())
+            test_utils.assert_in_set(header_set, header1)
+            -- assert(header_set[header1], string.format("Expected header1 to be Trailers or Junk found %q", header1))
+            -- header_set[header1] = nil
+            local header2 = assert(iter())
+            test_utils.assert_in_set(header_set, header2)
+            -- assert(header_set[header2], string.format("Expected header2 to be Trailers or Junk found %q", header2))
+            -- header_set[header2] = nil
+            assert.are.same("\r\n", iter())
+            assert.are.same("the message will have extra headers", iter())
+            assert.are.same("after it", iter())
+            local trailer_set = {
+                ["Date: Today\r\n"] = true,
+                ["Junk: This is a junk header!\r\n"] = true
+            }
+            local trailer1 = assert(iter())
+            test_utils.assert_in_set(trailer_set, trailer1)
+            local trailer2 = assert(iter())
+            test_utils.assert_in_set(trailer_set, trailer2)
         end)
     end)
 end)

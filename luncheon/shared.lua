@@ -130,7 +130,7 @@ function SharedLogic.body_type(self)
         return nil, err
     end
 
-    enc, err = headers:get_all("Transfer-Encoding")
+    enc, err = headers:get_all("transfer_encoding")
     if not enc then
         return nil, err
   end

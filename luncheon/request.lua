@@ -17,7 +17,7 @@ local shared = require 'luncheon.shared'
 ---@field private _source fun(pat:string|number|nil):string
 ---@field private _parsed_headers boolean
 ---@field private _received_body boolean
----@field public mode Mode
+---@field public mode Mode How this request was built
 ---@field public trailers Headers|nil The HTTP trailers
 local Request = {}
 Request.__index = Request
