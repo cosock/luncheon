@@ -129,11 +129,11 @@ function SharedLogic.body_type(self)
     if not headers then
         return nil, err
     end
-
+    
     enc, err = headers:get_all("transfer_encoding")
     if not enc then
         return nil, err
-  end
+    end
     local ty = "close"
     for _, v in ipairs(enc) do
         if string.match(v, "chunked") then
@@ -158,7 +158,6 @@ end
 ---@return string|nil
 ---@return nil|string
 function SharedLogic.fill_len_or_close_body(self, len)
-
     local body, err = self._source(len or "*a")
     if not body then
         return nil, err
@@ -171,7 +170,7 @@ end
 ---@return nil|string
 function SharedLogic.fill_chunked_body_step(self)
     -- read chunk length with trailing new lines
-
+    
     local len, err = self._source("*l")
     if not len then
         return nil, err
@@ -187,7 +186,7 @@ function SharedLogic.fill_chunked_body_step(self)
     if not len2 then
         return nil, "invalid number for chunk length"
     end
-
+    
     local chunk, err = self._source(len2)
     if not chunk then
         return nil, err
@@ -239,7 +238,7 @@ end
 ---@return nil|string
 function SharedLogic.fill_body(self)
     if self.mode == Mode.Incoming
-        and not self._received_body then
+    and not self._received_body then
         local ty, err = SharedLogic.body_type(self)
         if not ty then
             return err
@@ -288,56 +287,75 @@ function SharedLogic.get_headers(self)
     return self.headers
 end
 
----Serialize the pre body text of a request/response including the trailing new line
----@param t Request|Response
-function SharedLogic.serialize_pre_body(t)
-    local first, headers, headers_str, err
-    first, err = t:_serialize_preamble()
-    if not first then
-        return nil, err
-    end
-    headers, err = t:get_headers()
-    if not headers then
-        return nil, err
-    end
-    headers_str, err = headers:serialize()
-    if not headers_str then
-        return nil, err
-    end
-    return first
-        .. '\r\n'
-        .. headers_str
-        .. '\r\n'
-end
-
 --- Serailize the provide Request or Response into a string with new lines
 ---@param t Request|Response
 ---@return string|nil result The serialized string if nil an error occured
 ---@return nil|string err If not nil the error
 function SharedLogic.serialize(t)
-    local pre, body, e
-    if t.mode == Mode.Incoming then
-        e = SharedLogic.fill_headers(t)
-        if e then return nil, e end
-        e = SharedLogic.fill_body(t)
-        if e then return nil, e end
+    local ret = ""
+    for chunk in t:iter() do
+        ret = ret .. chunk
     end
-    pre, e = SharedLogic.serialize_pre_body(t)
-    if not pre then
-        return nil, e
-    end
-    body, e = t:get_body()
+    return ret
+end
+
+---build and iterator for outbound chunked encoding
+---@param self Request|Response
+---@return (fun():string|nil,string|nil)|nil,nil|string
+function SharedLogic.chunked_oubtbound_body_iter(self)
+    local chunk_size = self._chunk_size or 1024
+    local body, err = self:get_body()
     if not body then
-        return nil, e
+        return nil, err
     end
-    return pre .. body
+    return function()
+        if not body then
+            return nil, '___eof___'
+        end
+        local chunk = string.sub(body, 1, chunk_size)
+        body = string.sub(body, math.min(#chunk, chunk_size)+1, #body)
+        if chunk == "" then
+            body = nil
+        end
+        local ret = string.format("%x\r\n%s", #chunk, chunk)
+        if #chunk > 0 then
+            return ret .. "\r\n"
+        end
+        return ret
+    end
+end
+
+---build and iterator for outbound non-chunked encoding
+---@param self Request|Response
+---@return (fun():string|nil,string|nil)|nil,nil|string
+function SharedLogic.normal_body_iter(self)
+    local body, line, err
+    body, err = self:get_body()
+    if not body then
+        return nil, err
+    end
+    return function()
+        line, body = utils.next_line(body, true)
+        if not line then
+            if #body == 0 then
+                return nil, '___eof___'
+            else
+                local ret = body
+                body = ""
+                return ret
+            end
+            
+        end
+        
+        return line
+    end
 end
 
 function SharedLogic.iter(self)
     local state = 'start'
     local suffix = '\r\n'
     local header_iter = self:get_headers():iter()
-    local value, body, body_type, err, trailers_iter
+    local value, body, body_iter, body_type, err, trailers_iter
     return function()
         if state == 'start' then
             state = 'headers'
@@ -374,7 +392,7 @@ function SharedLogic.iter(self)
                             end
                         end
                         state = 'complete'
-                        return nil
+                        return suffix
                     end
                     return chunk, err
                 end
@@ -385,18 +403,32 @@ function SharedLogic.iter(self)
                 end
                 return line, err
             end
-            if not body then
-                local b, err = self:get_body()
-                if not b then
+            if not body_iter then
+                if self._chunk_size then
+                    body_iter, err = SharedLogic.chunked_oubtbound_body_iter(self)
+                else
+                    body_iter, err = SharedLogic.normal_body_iter(self)
+                end
+                if not body_iter then
+                    body_iter = function() return nil, err end
+                end
+            end
+            value, err = body_iter()
+            if not value then
+                if err == "___eof___" then
+                    if self._chunk_size then
+                        if self.trailers then
+                            state = "trailers"
+                            trailers_iter = self.trailers:iter()
+                        end
+                        state = "complete"
+                        return "\r\n"
+                    else
+                        state = "complete"
+                    end
+                else
                     return nil, err
                 end
-                state = 'body'
-                body = b
-            end
-            value, body = utils.next_line(body, true)
-            if not value then
-                state = 'complete'
-                return body
             end
             return value
         end
@@ -441,7 +473,7 @@ function SharedLogic.build_chunk(self, max)
     local buf = ""
     if self._send_state.stage == "none" then
         buf = self:_serialize_preamble() .. "\r\n"
-
+        
         self._send_state.stage = "header"
     end
     if #buf >= max then
@@ -452,7 +484,7 @@ function SharedLogic.build_chunk(self, max)
         local key, value = next(inner_headers, self._send_state.last_header)
         if not key then
             buf = buf .. "\r\n"
-
+            
             self._send_state = {
                 stage = 'body',
                 sent = 0,
@@ -536,8 +568,8 @@ function SharedLogic.send(self, bytes, skip_length)
         self:set_content_length(#self.body)
     end
     while self._send_state.stage ~= 'body'
-        or (self._send_state.sent or 0) < #self.body do
-            
+    or (self._send_state.sent or 0) < #self.body do
+        
         local s, e = SharedLogic.send_body_chunk(self)
         if not s then
             return nil, e

@@ -212,6 +212,16 @@ function Response:set_content_length(len)
     return self:replace_header('content_length', string.format('%i', len))
 end
 
+---Set the Transfer-Encoding header for this response by default this will be length encoding
+---@param te string The transfer encoding
+---@param chunk_size integer|nil if te is "chunked" the size of the chunk to send defaults to 1024
+function Response:set_transfer_encoding(te, chunk_size)
+    if te == "chunked" then
+        self._chunk_size = chunk_size or 1024
+    end
+    self.headers:replace("transfer_encoding", te)
+end
+
 ---Serialize this full response into a string
 ---@return string|nil
 ---@return nil|string
@@ -234,7 +244,9 @@ end
 ---@return Response
 function Response:append_body(s)
     self.body = (self.body or '') .. s
-    self:set_content_length(#self.body)
+    if not self._chunk_size then
+        self:set_content_length(#self.body)
+    end
     return self
 end
 

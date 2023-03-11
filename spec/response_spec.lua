@@ -383,5 +383,31 @@ describe('Response', function()
             local trailer2 = assert(iter())
             test_utils.assert_in_set(trailer_set, trailer2)
         end)
+        it("can be used in outbound", function()
+            local r = assert(Response.new(200, nil))
+            local chunk1 = string.rep("a", 10)
+            local chunk2 = string.rep("b", 10)
+            local chunk3 = string.rep("c", 10)
+            r:set_transfer_encoding("chunked", 10)
+            r:append_body(chunk1)
+            r:append_body(chunk2)
+            r:append_body(chunk3)
+            
+            local expected_chunks = {
+                "HTTP/1.1 200 OK\r\n",
+                "Transfer-Encoding: chunked\r\n",
+                "\r\n",
+                string.format("%x\r\n%s\r\n", #chunk1, chunk1),
+                string.format("%x\r\n%s\r\n", #chunk2, chunk2),
+                string.format("%x\r\n%s\r\n", #chunk3, chunk3),
+                string.format("0\r\n"),
+                string.format("\r\n")
+            }
+            for line in r:iter() do
+                local expected = table.remove(expected_chunks, 1)
+                assert.are.same(expected, line)
+            end
+            assert.are.same({}, expected_chunks)
+        end)
     end)
 end)
