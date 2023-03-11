@@ -60,6 +60,15 @@ function Request.source(source)
     if acc_err then
         return nil, acc_err
     end
+
+    -- check if line is only whitespace and move to next line
+    while line and line:match('^%s*$') and not acc_err do
+        line, acc_err = r:_next_line()
+    end
+    if not line then
+        return nil, acc_err
+    end
+
     local pre, pre_err = Request._parse_preamble(line)
     if not pre then
         return nil, pre_err
