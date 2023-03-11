@@ -40,6 +40,15 @@ function Response.source(source)
     if not line then
         return nil, err
     end
+
+    -- check if line is only whitespace and move to next line
+    while line and line:match('^%s*$') and not err do
+        line, err = ret:next_line()
+    end
+    if not line then
+        return nil, err
+    end
+
     local pre, err = Response._parse_preamble(line)
     if not pre then
         return nil, err
