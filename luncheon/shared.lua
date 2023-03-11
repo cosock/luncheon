@@ -152,13 +152,25 @@ function SharedLogic.body_type(self)
     }
 end
 
----fill a content-length or close body
+---fill a body based on content-length
 ---@param self Request|Response
----@param len integer|nil
+---@param len integer
 ---@return string|nil
 ---@return nil|string
-function SharedLogic.fill_len_or_close_body(self, len)
-    local body, err = self._source(len or "*a")
+function SharedLogic.fill_fixed_length_body(self, len)
+    local body, err = self._source(len)
+    if not body then
+        return nil, err
+    end
+    return body
+end
+
+---fill a body by reading until the socket is closed
+---@param self Request|Response
+---@return string|nil
+---@return nil|string
+function SharedLogic.fill_closed_body(self)
+    local body, err = self._source("*a")
     if not body then
         return nil, err
     end
@@ -244,8 +256,17 @@ function SharedLogic.fill_body(self)
             return err
         end
         local body, err
-        if ty.type == "close" or ty.type == "length" then
-            body, err = SharedLogic.fill_len_or_close_body(self, ty.length)
+        if ty.type == "length" then
+            body, err = SharedLogic.fill_fixed_length_body(self, ty.length)
+            if not body then
+                return err
+            end
+        elseif ty.type == "close" then
+            -- We only want to read until socket closing if the socket
+            -- will actually close, otherwise it will hang. The lack of
+            -- a content-length header is not enough of a clue as the
+            -- socket may be setup for keep-alive.
+            body, err = SharedLogic.fill_closed_body(self)
             if not body then
                 return err
             end
