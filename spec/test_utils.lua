@@ -70,15 +70,15 @@ local function create_chunked(chunks, status, method, url, extensions, trailers)
   local header = "transfer-encoding: chunked"
   local header2 = generate_trailer_header(trailers)
   local request = request_first_line(method, url) .. "\r\n"
-    .. header .. "\r\n"
-    .. header2
-    .. "\r\n"
-    .. body
-  local response = response_first_line(status).."\r\n"
-    .. header.."\r\n"
-    .. header2
-    .. "\r\n"
-    .. body
+      .. header .. "\r\n"
+      .. header2
+      .. "\r\n"
+      .. body
+  local response = response_first_line(status) .. "\r\n"
+      .. header .. "\r\n"
+      .. header2
+      .. "\r\n"
+      .. body
   return {
     chunked_body = body,
     assert_body = assert_body,
@@ -102,11 +102,11 @@ m.large_chunks = create_chunked({
 m.extended = create_chunked({
   "hello",
   "world"
-}, 200, "GET", "/extended", {"ext1", "ext2", "ext3"})
+}, 200, "GET", "/extended", { "ext1", "ext2", "ext3" })
 m.trailers = create_chunked({
   "the message will have extra headers",
   "after it"
-}, 200, "GET", "/trailers", {}, {"Date: Today", "Junk: This is a junk header!"})
+}, 200, "GET", "/trailers", {}, { "Date: Today", "Junk: This is a junk header!" })
 
 --- Checks if the value provided is in the set and removes it if it is
 function m.assert_in_set(set, value)

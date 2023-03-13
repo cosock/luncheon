@@ -1,7 +1,7 @@
-local net_url = require 'net.url'
-local Headers = require 'luncheon.headers'
-local utils = require 'luncheon.utils'
-local shared = require 'luncheon.shared'
+local net_url = require "net.url"
+local Headers = require "luncheon.headers"
+local utils = require "luncheon.utils"
+local shared = require "luncheon.shared"
 
 ---@class Request
 ---
@@ -29,17 +29,17 @@ Request.__index = Request
 ---@return {method:string,url:table,http_version:string}|nil table
 ---@return nil|string
 function Request._parse_preamble(line)
-    local start, _, method, path, http_version = string.find(line, '([A-Z]+) (.+) HTTP/([0-9.]+)')
-    if not start then
-        return nil, string.format('Invalid http request first line: "%s"', line)
-    end
-    return {
-        method = method,
-        url = net_url.parse(path),
-        http_version = http_version,
-        body = nil,
-        headers = nil,
-    }
+  local start, _, method, path, http_version = string.find(line, "([A-Z]+) (.+) HTTP/([0-9.]+)")
+  if not start then
+    return nil, string.format('Invalid http request first line: "%s"', line)
+  end
+  return {
+    method = method,
+    url = net_url.parse(path),
+    http_version = http_version,
+    body = nil,
+    headers = nil,
+  }
 end
 
 ---Construct a request from a source function
@@ -47,36 +47,36 @@ end
 ---@return Request|nil request
 ---@return nil|string error
 function Request.source(source)
-    if not source then
-        return nil, 'cannot create request with nil source'
-    end
-    local r = {
-        _source = source,
-        _parsed_headers = false,
-        mode = shared.Mode.Incoming,
-    }
-    setmetatable(r, Request)
-    local line, acc_err = r:_next_line()
-    if acc_err then
-        return nil, acc_err
-    end
+  if not source then
+    return nil, "cannot create request with nil source"
+  end
+  local r = {
+    _source = source,
+    _parsed_headers = false,
+    mode = shared.Mode.Incoming,
+  }
+  setmetatable(r, Request)
+  local line, acc_err = r:_next_line()
+  if acc_err then
+    return nil, acc_err
+  end
 
-    -- check if line is only whitespace and move to next line
-    while line and line:match('^%s*$') and not acc_err do
-        line, acc_err = r:_next_line()
-    end
-    if not line then
-        return nil, acc_err
-    end
+  -- check if line is only whitespace and move to next line
+  while line and line:match("^%s*$") and not acc_err do
+    line, acc_err = r:_next_line()
+  end
+  if not line then
+    return nil, acc_err
+  end
 
-    local pre, pre_err = Request._parse_preamble(line)
-    if not pre then
-        return nil, pre_err
-    end
-    r.http_version = pre.http_version
-    r.method = pre.method
-    r.url = pre.url
-    return r
+  local pre, pre_err = Request._parse_preamble(line)
+  if not pre then
+    return nil, pre_err
+  end
+  r.http_version = pre.http_version
+  r.method = pre.method
+  r.url = pre.url
+  return r
 end
 
 ---Create a new Request with a lua socket
@@ -84,15 +84,15 @@ end
 ---@return Request|nil request with the first line parsed
 ---@return nil|string if not nil an error message
 function Request.tcp_source(socket)
-    local utils = require 'luncheon.utils'
-    local ret, err = Request.source(
-        utils.tcp_socket_source(socket)
-    )
-    if not ret then
-        return nil, err
-    end
-    ret.socket = socket
-    return ret
+  local utils = require "luncheon.utils"
+  local ret, err = Request.source(
+    utils.tcp_socket_source(socket)
+  )
+  if not ret then
+    return nil, err
+  end
+  ret.socket = socket
+  return ret
 end
 
 ---Create a new Request with a lua socket
@@ -100,15 +100,15 @@ end
 ---@return Request|nil
 ---@return nil|string
 function Request.udp_source(socket)
-    local utils = require 'luncheon.utils'
-    local ret, err =  Request.source(
-        utils.udp_socket_source(socket)
-    )
-    if not ret then
-        return nil, err
-    end
-    ret.socket = socket
-    return ret
+  local utils = require "luncheon.utils"
+  local ret, err = Request.source(
+    utils.udp_socket_source(socket)
+  )
+  if not ret then
+    return nil, err
+  end
+  ret.socket = socket
+  return ret
 end
 
 ---Get the headers for this request
@@ -117,14 +117,14 @@ end
 ---@return Headers|nil
 ---@return string|nil
 function Request:get_headers()
-    return shared.SharedLogic.get_headers(self)
+  return shared.SharedLogic.get_headers(self)
 end
 
 ---Read a single line from the socket
 ---@return string|nil, string|nil
 function Request:_next_line()
-    local line, err = self._source('*l')
-    return line, err
+  local line, err = self._source("*l")
+  return line, err
 end
 
 ---Get the contents of this request's body
@@ -132,19 +132,19 @@ end
 ---from the socket
 ---@return string|nil, string|nil
 function Request:get_body()
-    return shared.SharedLogic.get_body(self)
+  return shared.SharedLogic.get_body(self)
 end
 
 ---Get the value from the Content-Length header that should be present
 ---for all http requests
 ---@return number|nil, string|nil
 function Request:get_content_length()
-    return shared.SharedLogic.get_content_length(self)
+  return shared.SharedLogic.get_content_length(self)
 end
 
 ---@deprecated see get_content_length
 function Request:content_length()
-    return self:get_content_length()
+  return self:get_content_length()
 end
 
 --#endregion Parser
@@ -156,22 +156,22 @@ end
 ---@param socket table|nil
 ---@return Request
 function Request.new(method, url, socket)
-    if type(url) == 'string' then
-        url = net_url.parse(url)
-    end
-    return setmetatable({
-        method = string.upper(method or 'GET'),
-        url = url or net_url.parse('/'),
-        headers = Headers.new(),
-        http_version = '1.1',
-        body = '',
-        socket = socket,
-        _send_state = {
-            stage = 'none',
-        },
-        _parsed_header = true,
-        mode = shared.Mode.Outgoing,
-    }, Request)
+  if type(url) == "string" then
+    url = net_url.parse(url)
+  end
+  return setmetatable({
+    method = string.upper(method or "GET"),
+    url = url or net_url.parse("/"),
+    headers = Headers.new(),
+    http_version = "1.1",
+    body = "",
+    socket = socket,
+    _send_state = {
+      stage = "none",
+    },
+    _parsed_header = true,
+    mode = shared.Mode.Outgoing,
+  }, Request)
 end
 
 ---Add a header to the internal map of headers
@@ -182,13 +182,13 @@ end
 ---@param value string The Header's value
 ---@return Request
 function Request:add_header(key, value)
-    shared.SharedLogic.append_header(self, key, value, "headers")
-    return self
+  shared.SharedLogic.append_header(self, key, value, "headers")
+  return self
 end
 
 function Request:add_trailer(key, value)
-    shared.SharedLogic.append_header(self, key, value, "trailers")
-    return self
+  shared.SharedLogic.append_header(self, key, value, "trailers")
+  return self
 end
 
 ---Replace or append a header to the internal headers map
@@ -198,13 +198,13 @@ end
 ---@param value any If not a string will call tostring
 ---@return Request
 function Request:replace_header(key, value)
-    shared.SharedLogic.replace_header(self, key, value, "headers")
-    return self
+  shared.SharedLogic.replace_header(self, key, value, "headers")
+  return self
 end
 
 function Request:replace_trailer(key, value)
-    shared.SharedLogic.replace_header(self, key, value, "trailers")
-    return self
+  shared.SharedLogic.replace_header(self, key, value, "trailers")
+  return self
 end
 
 ---Set the Content-Type header for this request
@@ -213,11 +213,11 @@ end
 ---@return Request|nil
 ---@return nil|string
 function Request:set_content_type(ct)
-    if type(ct) ~= 'string' then
-        return nil, string.format('mime type must be a string, found %s', type(ct))
-    end
-    self:replace_header('content_type', ct)
-    return self
+  if type(ct) ~= "string" then
+    return nil, string.format("mime type must be a string, found %s", type(ct))
+  end
+  self:replace_header("content_type", ct)
+  return self
 end
 
 ---Set the Content-Length header for this request
@@ -225,56 +225,57 @@ end
 ---@param len number The Expected length of the body
 ---@return Request
 function Request:set_content_length(len)
-    self:replace_header('content_length', tostring(len))
-    return self
+  self:replace_header("content_length", tostring(len))
+  return self
 end
 
 ---Set the Transfer-Encoding header for this request by default this will be length encoding
 ---@param te string The transfer encoding
 ---@param chunk_size integer|nil if te is "chunked" the size of the chunk to send defaults to 1024
 function Request:set_transfer_encoding(te, chunk_size)
-    if te == "chunked" then
-        self._chunk_size = chunk_size or 1024
-    end
-    self.headers:replace("transfer_encoding", te)
+  if te == "chunked" then
+    self._chunk_size = chunk_size or 1024
+  end
+  self.headers:replace("transfer_encoding", te)
 end
 
 ---append the provided chunk to this Request's body
 ---@param chunk string The text to add to this request's body
 ---@return Request
 function Request:append_body(chunk)
-    self.body = (self.body or '') .. chunk
-    if not self._chunk_size then
-        self:set_content_length(#self.body)
-    end
-    return self
+  self.body = (self.body or "") .. chunk
+  if not self._chunk_size then
+    self:set_content_length(#self.body)
+  end
+  return self
 end
 
 ---Private method for serializing the url property into a valid URL string suitable
 ---for the first line of an HTTP request
 ---@return string
 function Request:_serialize_path()
-    if type(self.url) == 'string' then
-        self.url = net_url.parse(self.url)
-    end
-    local path = self.url.path or '/'
-    if not self.url.query or not next(self.url.query) then
-        return path
-    end
-    return path .. '?' .. net_url.buildQuery(self.url.query)
+  if type(self.url) == "string" then
+    self.url = net_url.parse(self.url)
+  end
+  local path = self.url.path or "/"
+  if not self.url.query or not next(self.url.query) then
+    return path
+  end
+  return path .. "?" .. net_url.buildQuery(self.url.query)
 end
 
 ---Private method for serializing the first line of the request
 ---@return string
 function Request:_serialize_preamble()
-    return string.format('%s %s HTTP/%s', string.upper(self.method), self:_serialize_path(), self.http_version)
+  return string.format("%s %s HTTP/%s", string.upper(self.method), self:_serialize_path(),
+    self.http_version)
 end
 
 ---Serialize this request into a single string
 ---@return string|nil
 ---@return nil|string
 function Request:serialize()
-    return shared.SharedLogic.serialize(self)
+  return shared.SharedLogic.serialize(self)
 end
 
 ---Serialize this request as a lua iterator that will
@@ -282,7 +283,7 @@ end
 ---This will split the body on any internal new lines as well
 ---@return fun():string
 function Request:iter()
-    return shared.SharedLogic.iter(self)
+  return shared.SharedLogic.iter(self)
 end
 
 --#endregion Builder
@@ -293,14 +294,14 @@ end
 ---@return integer|nil if not nil, success
 ---@return nil|string if not nil and error message
 function Request:send_preamble()
-    return shared.SharedLogic.send_preamble(self)
+  return shared.SharedLogic.send_preamble(self)
 end
 
 ---Pass a single header line into the sink functions
 ---@return integer|nil If not nil, then successfully "sent"
 ---@return nil|string If not nil, the error message
 function Request:send_header()
-    return shared.SharedLogic.send_header(self)
+  return shared.SharedLogic.send_header(self)
 end
 
 ---Slice a chunk of at most 1024 bytes from `self.body` and pass it to
@@ -308,7 +309,7 @@ end
 ---@return integer|nil if not nil, success
 ---@return nil|string if not nil and error message
 function Request:send_body_chunk()
-    return shared.SharedLogic.send_body_chunk(self)
+  return shared.SharedLogic.send_body_chunk(self)
 end
 
 ---Serialize and pass the request chunks into the sink
@@ -316,7 +317,7 @@ end
 ---@return integer|nil If not nil sent successfully
 ---@return nil|string if not nil the error message
 function Request:send(bytes, skip_length)
-    return shared.SharedLogic.send(self, bytes, skip_length)
+  return shared.SharedLogic.send(self, bytes, skip_length)
 end
 
 --#endregion

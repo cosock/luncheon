@@ -17,14 +17,14 @@ local Headers = {}
 Headers.__index = Headers
 
 local function _append(t, key, value)
-    value = tostring(value)
-    if not t[key] then
-        t[key] = value
-    elseif type(t[key]) == 'string' then
-        t[key] = {t[key], value}
-    else
-        table.insert(t[key], value)
-    end
+  value = tostring(value)
+  if not t[key] then
+    t[key] = value
+  elseif type(t[key]) == "string" then
+    t[key] = { t[key], value }
+  else
+    table.insert(t[key], value)
+  end
 end
 
 ---Serialize a key value pair w/o the trailing new line
@@ -35,51 +35,51 @@ end
 ---@param value string|string[]
 ---@return string
 function Headers.serialize_header(key, value)
-    if type(value) == 'table' then
-        local serialized = {}
-        for _, v in ipairs(value) do
-            table.insert(serialized, Headers.serialize_header(key, v))
-        end
-        return table.concat(serialized, '\r\n')
+  if type(value) == "table" then
+    local serialized = {}
+    for _, v in ipairs(value) do
+      table.insert(serialized, Headers.serialize_header(key, v))
     end
-    -- special case for MD5
-    key = string.gsub(key, 'md5', 'mD5')
-    -- special case for ETag
-    key = string.gsub(key, 'etag', 'ETag')
-    if #key < 3 then
-        return string.format('%s: %s', key:upper(), value)
-    end
-    -- special case for WWW-*
-    key = string.gsub(key, 'www', 'WWW')
-    local replaced = key:sub(1, 1):upper() .. string.gsub(key:sub(2), '_(%l)', function (c)
-        return '-' .. c:upper()
-    end)
-    return string.format('%s: %s', replaced, value)
+    return table.concat(serialized, "\r\n")
+  end
+  -- special case for MD5
+  key = string.gsub(key, "md5", "mD5")
+  -- special case for ETag
+  key = string.gsub(key, "etag", "ETag")
+  if #key < 3 then
+    return string.format("%s: %s", key:upper(), value)
+  end
+  -- special case for WWW-*
+  key = string.gsub(key, "www", "WWW")
+  local replaced = key:sub(1, 1):upper() .. string.gsub(key:sub(2), "_(%l)", function(c)
+    return "-" .. c:upper()
+  end)
+  return string.format("%s: %s", replaced, value)
 end
 
 ---Serialize the whole set of headers separating them with a '\\r\\n'
 ---@return string
 function Headers:serialize()
-    local ret = ''
-    for header in self:iter() do
-        ret = ret .. header .. '\r\n'
-    end
-    return ret
+  local ret = ""
+  for header in self:iter() do
+    ret = ret .. header .. "\r\n"
+  end
+  return ret
 end
 
 function Headers:_handle_single_line(line)
-    if string.match(line, '^%s+') ~= nil then
-        if not self._last_key then
-            return nil, 'Header continuation with no key'
-        end
-        local existing = self:get_one(self._last_key)
-        self._inner[self._last_key] = string.format('%s %s', existing, string.sub(line, 2))
-        return 1
+  if string.match(line, "^%s+") ~= nil then
+    if not self._last_key then
+      return nil, "Header continuation with no key"
     end
-    for raw_key, value in string.gmatch(line, '([^%c()<>@,;:\\"/%[%]?={} \t]+): (.+);?') do
-        self:append(raw_key, value)
-    end
+    local existing = self:get_one(self._last_key)
+    self._inner[self._last_key] = string.format("%s %s", existing, string.sub(line, 2))
     return 1
+  end
+  for raw_key, value in string.gmatch(line, '([^%c()<>@,;:\\"/%[%]?={} \t]+): (.+);?') do
+    self:append(raw_key, value)
+  end
+  return 1
 end
 
 ---Append a chunk of headers to this map
@@ -87,16 +87,16 @@ end
 ---@return integer|nil success 1 if successful
 ---@return nil|string err if ret1 is `nil` an error message
 function Headers:append_chunk(text)
-    if type(text) ~= 'string' then
-        return nil, 'invalid header, expected string found ' .. type(text)
-    end
+  if type(text) ~= "string" then
+    return nil, "invalid header, expected string found " .. type(text)
+  end
   for chunk in string.gmatch(text, "([^\r\n]+)") do
-        local s, err = self:_handle_single_line(chunk)    
-        if not s then
-            return nil, err
-        end
+    local s, err = self:_handle_single_line(chunk)
+    if not s then
+      return nil, err
     end
-    return 1
+  end
+  return 1
 end
 
 ---Constructor for a Headers instance with the provided text
@@ -104,23 +104,23 @@ end
 ---@return Headers|nil
 ---@return nil|string
 function Headers.from_chunk(text)
-    local headers = Headers.new()
-    local s, err = headers:append_chunk(text)
-    if not s then
-        return nil, err
-    end
-    return headers
+  local headers = Headers.new()
+  local s, err = headers:append_chunk(text)
+  if not s then
+    return nil, err
+  end
+  return headers
 end
 
 ---Bare constructor
 ---@return Headers
 function Headers.new()
-    local ret = {
-        _inner = {},
-        last_key = nil,
-    }
-    setmetatable(ret, Headers)
-    return ret
+  local ret = {
+    _inner = {},
+    last_key = nil,
+  }
+  setmetatable(ret, Headers)
+  return ret
 end
 
 ---Convert a standard header key to the normalized
@@ -128,9 +128,9 @@ end
 ---@param key string
 ---@return string
 function Headers.normalize_key(key)
-    local lower = string.lower(key)
-    local normalized = string.gsub(lower, '-', '_')
-    return normalized
+  local lower = string.lower(key)
+  local normalized = string.gsub(lower, "-", "_")
+  return normalized
 end
 
 ---Insert a single key value pair to the collection will duplicate existing keys
@@ -138,10 +138,10 @@ end
 ---@param value string
 ---@return Headers
 function Headers:append(key, value)
-    key = Headers.normalize_key(key)
-    _append(self._inner, key, value)
-    self._last_key = key
-    return self
+  key = Headers.normalize_key(key)
+  _append(self._inner, key, value)
+  self._last_key = key
+  return self
 end
 
 ---Insert a single key value pair to the collection will not duplicate keys
@@ -149,10 +149,10 @@ end
 ---@param value string
 ---@return Headers
 function Headers:replace(key, value)
-    key = Headers.normalize_key(key)
-    self._inner[key] = value
-    self._last_key = key
-    return self
+  key = Headers.normalize_key(key)
+  self._inner[key] = value
+  self._last_key = key
+  return self
 end
 
 ---Get a header from the map of headers
@@ -164,13 +164,13 @@ end
 ---@param key string
 ---@return string
 function Headers:get_one(key)
-    local k = Headers.normalize_key(key or '')
-    local value = self._inner[k]
-    if type(value) == 'table' then
-        return value[#value]
-    else
-        return value
-    end
+  local k = Headers.normalize_key(key or "")
+  local value = self._inner[k]
+  if type(value) == "table" then
+    return value[#value]
+  else
+    return value
+  end
 end
 
 ---Get a header from the map of headers as a list of strings.
@@ -184,26 +184,26 @@ end
 ---@param key string
 ---@return string[]
 function Headers:get_all(key)
-    local k = Headers.normalize_key(key or '')
-    local values = self._inner[k]
-    if type(values) == 'string' then
-        return {values}
-    end
-    return values
+  local k = Headers.normalize_key(key or "")
+  local values = self._inner[k]
+  if type(values) == "string" then
+    return { values }
+  end
+  return values
 end
 
 ---Return a lua iterator over the key/value pairs in this header map
 ---@return function():string|nil
 function Headers:iter()
-    local last = nil
-    return function ()
-        local k, v = next(self._inner, last)
-        last = k
-        if not k then
-            return
-        end
-        return Headers.serialize_header(k, v)
+  local last = nil
+  return function()
+    local k, v = next(self._inner, last)
+    last = k
+    if not k then
+      return
     end
+    return Headers.serialize_header(k, v)
+  end
 end
 
 return Headers
