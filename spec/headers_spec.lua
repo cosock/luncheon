@@ -1,6 +1,7 @@
 ---@diagnostic disable: invisible
 local Headers = require "luncheon.headers"
 local normal_headers = require "spec.normal_headers"
+local test_utils = require "spec.test_utils"
 
 describe("Headers", function()
   describe("append_chunk", function()
@@ -126,6 +127,20 @@ describe("Headers", function()
       assert.are.equal("Accept: application/json1", header1)
       local header2 = Headers.serialize_header("accept", { "application/json1", "application/json2" })
       assert.are.equal("Accept: application/json1\r\nAccept: application/json2", header2)
+    end)
+    it("handle all", function()
+      local headers = Headers.new()
+      local header_set = {}
+      for _, set in ipairs(normal_headers) do
+        header_set[set[1]] = true
+        headers:append_chunk(set[1])
+      end
+      local serialized = headers:serialize()
+      local ct = 0
+      for line in string.gmatch(serialized, "([^\r\n]+)\r\n") do
+        ct = ct + 1
+        test_utils.assert_in_set(header_set, line)
+      end
     end)
   end)
 end)

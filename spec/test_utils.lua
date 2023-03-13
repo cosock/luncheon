@@ -117,7 +117,7 @@ function m.assert_in_set(set, value)
   local msg = ""
   for k, _ in pairs(set) do
     if #msg > 0 then
-      msg = msg .. " or "
+      msg = msg .. "\n or "
     end
     msg = msg .. string.gsub(string.gsub(k, "\r", "\\r"), "\n", "\\n")
   end

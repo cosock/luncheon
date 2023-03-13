@@ -165,7 +165,7 @@ describe("Response", function()
     local res = assert(r:serialize())
     assert.are.equal(response_text, res)
   end)
-  it("Response error socket #target", function()
+  it("Response error socket", function()
     local r = assert(Response.source(utils.tcp_socket_source(MockSocket.new({
       "HTTP/1.1 200 OK\r\n",
       "Content-Length: 10\r\n",
@@ -433,7 +433,7 @@ describe("Response", function()
         string.format("%x\r\n%s\r\n", #chunk3, chunk3),
         string.format("0\r\n"),
         "X-Trailing-Header: some-trailing-value",
-        string.format("\r\n")
+        "\r\n",
       }
       local iter = r:iter()
       assert.are.same(table.remove(expected_chunks, 1), iter())

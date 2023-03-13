@@ -232,11 +232,12 @@ end
 ---Set the Transfer-Encoding header for this request by default this will be length encoding
 ---@param te string The transfer encoding
 ---@param chunk_size integer|nil if te is "chunked" the size of the chunk to send defaults to 1024
+---@return Request
 function Request:set_transfer_encoding(te, chunk_size)
   if te == "chunked" then
     self._chunk_size = chunk_size or 1024
   end
-  self.headers:replace("transfer_encoding", te)
+  return self:replace_header("transfer_encoding", te)
 end
 
 ---append the provided chunk to this Request's body
