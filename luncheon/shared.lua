@@ -525,7 +525,7 @@ function SharedLogic.build_chunk(self, max)
     local body_len = 0
     if #buf < max then
         body_len = max - #buf
-        local start_idx = self._send_state.sent + 1
+        local start_idx = (self._send_state.sent or 0) + 1
         local end_idx = start_idx + body_len
         local chunk = string.sub(self.body, start_idx, end_idx)
         body_len = #chunk
@@ -576,7 +576,7 @@ function SharedLogic.send_body_chunk(self)
     if not s then
         return nil, e
     end
-    self._send_state.sent = self._send_state.sent + body_len
+    self._send_state.sent = (self._send_state.sent or 0) + body_len
     return 1
 end
 
