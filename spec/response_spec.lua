@@ -365,12 +365,8 @@ describe('Response', function()
             }
             local header1 = assert(iter())
             test_utils.assert_in_set(header_set, header1)
-            -- assert(header_set[header1], string.format("Expected header1 to be Trailers or Junk found %q", header1))
-            -- header_set[header1] = nil
             local header2 = assert(iter())
             test_utils.assert_in_set(header_set, header2)
-            -- assert(header_set[header2], string.format("Expected header2 to be Trailers or Junk found %q", header2))
-            -- header_set[header2] = nil
             assert.are.same("\r\n", iter())
             assert.are.same("the message will have extra headers", iter())
             assert.are.same("after it", iter())
@@ -383,7 +379,7 @@ describe('Response', function()
             local trailer2 = assert(iter())
             test_utils.assert_in_set(trailer_set, trailer2)
         end)
-        it("can be used in outbound", function()
+        it("iter can be used in outbound", function()
             local r = assert(Response.new(200, nil))
             local chunk1 = string.rep("a", 10)
             local chunk2 = string.rep("b", 10)
@@ -404,6 +400,43 @@ describe('Response', function()
                 string.format("\r\n")
             }
             for line in r:iter() do
+                local expected = table.remove(expected_chunks, 1)
+                assert.are.same(expected, line)
+            end
+            assert.are.same({}, expected_chunks)
+        end)
+        it("iter can be used in outbound with trailers", function()
+            local r = assert(Response.new(200, nil))
+            local chunk1 = string.rep("a", 10)
+            local chunk2 = string.rep("b", 10)
+            local chunk3 = string.rep("c", 10)
+            r:set_transfer_encoding("chunked", 10)
+                :add_header("trailer", "x-trailing-header")
+                :append_body(chunk1)
+                :append_body(chunk2)
+                :append_body(chunk3)
+                :add_trailer("x-trailing-header", "some-trailing-value")
+            local expected_chunks = {
+                "HTTP/1.1 200 OK\r\n",
+                "Transfer-Encoding: chunked\r\n",
+                "Trailer: x-trailing-header\r\n",
+                "\r\n",
+                string.format("%x\r\n%s\r\n", #chunk1, chunk1),
+                string.format("%x\r\n%s\r\n", #chunk2, chunk2),
+                string.format("%x\r\n%s\r\n", #chunk3, chunk3),
+                string.format("0\r\n"),
+                "X-Trailing-Header: some-trailing-value",
+                string.format("\r\n")
+            }
+            local iter = r:iter()
+            assert.are.same(table.remove(expected_chunks, 1), iter())
+            local header_set = {
+                [table.remove(expected_chunks, 1)] = true,
+                [table.remove(expected_chunks, 1)] = true,
+            }
+            test_utils.assert_in_set(header_set, iter())
+            test_utils.assert_in_set(header_set, iter())
+            for line in iter do
                 local expected = table.remove(expected_chunks, 1)
                 assert.are.same(expected, line)
             end

@@ -130,11 +130,13 @@ function SharedLogic.body_type(self)
         return nil, err
     end
     
-    enc, err = headers:get_all("transfer_encoding")
-    if not enc then
-        return nil, err
-    end
+    enc = headers:get_all("transfer_encoding")
     local ty = "close"
+    if not enc then
+        return {
+            type = ty,
+        }
+    end
     for _, v in ipairs(enc) do
         if string.match(v, "chunked") then
             ty = "chunked"
@@ -441,6 +443,7 @@ function SharedLogic.iter(self)
                         if self.trailers then
                             state = "trailers"
                             trailers_iter = self.trailers:iter()
+                            return trailers_iter()
                         end
                         state = "complete"
                         return "\r\n"
@@ -461,7 +464,7 @@ function SharedLogic.iter(self)
             local trailer = trailers_iter()
             if not trailer then
                 state = 'complete'
-                return nil
+                return "\r\n"
             end
             return trailer .. suffix
         end

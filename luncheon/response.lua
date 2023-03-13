@@ -184,7 +184,12 @@ end
 ---@param value any If not a string will call tostring
 ---@return Response
 function Response:add_header(key, value)
-    shared.SharedLogic.append_header(self, key, value, "headers")
+  shared.SharedLogic.append_header(self, key, value, "headers")
+  return self
+end
+
+function Response:add_trailer(key, value)
+    shared.SharedLogic.append_header(self, key, value, "trailers")
     return self
 end
 
@@ -196,6 +201,11 @@ end
 ---@return Response
 function Response:replace_header(key, value)
     shared.SharedLogic.replace_header(self, key, value, "headers")
+    return self
+end
+
+function Response:replace_trailer(key, value)
+    shared.SharedLogic.replace_header(self, key, value, "trailers")
     return self
 end
 
@@ -228,7 +238,8 @@ function Response:set_transfer_encoding(te, chunk_size)
     if te == "chunked" then
         self._chunk_size = chunk_size or 1024
     end
-    self.headers:replace("transfer_encoding", te)
+    self:replace_header("transfer_encoding", te)
+    return self
 end
 
 ---Serialize this full response into a string

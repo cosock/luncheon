@@ -186,6 +186,11 @@ function Request:add_header(key, value)
     return self
 end
 
+function Request:add_trailer(key, value)
+    shared.SharedLogic.append_header(self, key, value, "trailers")
+    return self
+end
+
 ---Replace or append a header to the internal headers map
 ---
 ---note: this is not additive, any existing value will be lost
@@ -194,6 +199,11 @@ end
 ---@return Request
 function Request:replace_header(key, value)
     shared.SharedLogic.replace_header(self, key, value, "headers")
+    return self
+end
+
+function Request:replace_trailer(key, value)
+    shared.SharedLogic.replace_header(self, key, value, "trailers")
     return self
 end
 
