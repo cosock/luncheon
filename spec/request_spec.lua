@@ -422,6 +422,15 @@ describe("Request", function()
       end)
     end)
     describe("outbound", function()
+      it("mixed encoding works #target", function()
+        local expectations = {
+          { header = "", chunk_size = nil },
+          
+        }
+        local r = assert(Request.new("GET", "/", nil))
+        r:set_transfer_encoding("chunked,gzip")
+        assert.are.equal(1024, r._chunk_size)
+      end)
       it("iter works", function()
         local r = assert(Request.new("GET", "/", nil))
         local chunk1 = string.rep("a", 10)

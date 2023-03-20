@@ -14,6 +14,7 @@ local Mode = {
   Outgoing = "outgoing",
 }
 local SharedLogic = {}
+local CHUNKED = "chunked"
 
 ---Append a header to the `Headers` with the matching name
 ---@param self Request|Response
@@ -109,6 +110,18 @@ function SharedLogic.get_content_length(self)
   return self._content_length
 end
 
+function SharedLogic.includes_chunk_encoding(header)
+  if header == CHUNKED then
+    return true
+  end
+  for value in string.gmatch(header, "([^ ,]+)") do
+    if value == CHUNKED then
+      return true
+    end
+  end
+  return false
+end
+
 ---Determine what type of body we are dealing with
 ---@param self Request|Response
 ---@return table|nil
@@ -138,7 +151,7 @@ function SharedLogic.body_type(self)
     }
   end
   for _, v in ipairs(enc) do
-    if string.match(v, "chunked") then
+    if SharedLogic.includes_chunk_encoding(v) then
       ty = "chunked"
       break
     end

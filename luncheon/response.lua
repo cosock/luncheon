@@ -236,7 +236,7 @@ end
 ---@param chunk_size integer|nil if te is "chunked" the size of the chunk to send defaults to 1024
 ---@return Response
 function Response:set_transfer_encoding(te, chunk_size)
-  if te == "chunked" then
+  if shared.SharedLogic.includes_chunk_encoding(te) then
     self._chunk_size = chunk_size or 1024
   end
   return self:replace_header("transfer_encoding", te)
