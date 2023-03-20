@@ -204,6 +204,14 @@ function Response:replace_header(key, value)
   return self
 end
 
+---Replace or append a trailer to the internal trailers map
+---
+---note: This is not additive, any existing value will be lost
+---note: This is only intended for use with chunk-encoding any other encoding scheme
+---will end up ignoring these values
+---@param key string
+---@param value any If not a string will call tostring
+---@return Response
 function Response:replace_trailer(key, value)
   shared.SharedLogic.replace_header(self, key, value, "trailers")
   return self

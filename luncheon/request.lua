@@ -178,6 +178,8 @@ end
 ---note: this is additive, so adding X-Forwarded-For twice will
 ---cause there to be multiple X-Forwarded-For entries in the serialized
 ---headers
+---note: This is only intended for use with chunk-encoding any other encoding scheme
+---will end up ignoring these values
 ---@param key string The Header's key
 ---@param value string The Header's value
 ---@return Request
@@ -186,6 +188,13 @@ function Request:add_header(key, value)
   return self
 end
 
+---Add a trailer to the internal map of trailers
+---note: this is additive, so adding X-Forwarded-For twice will
+---cause there to be multiple X-Forwarded-For entries in the serialized
+---headers
+---@param key string The Header's key
+---@param value string The Header's value
+---@return Request
 function Request:add_trailer(key, value)
   shared.SharedLogic.append_header(self, key, value, "trailers")
   return self
@@ -202,6 +211,14 @@ function Request:replace_header(key, value)
   return self
 end
 
+---Replace or append a trailer to the internal trailers map
+---
+---note: This is not additive, any existing value will be lost
+---note: This is only intended for use with chunk-encoding any other encoding scheme
+---will end up ignoring these values
+---@param key string
+---@param value any If not a string will call tostring
+---@return Request
 function Request:replace_trailer(key, value)
   shared.SharedLogic.replace_header(self, key, value, "trailers")
   return self
