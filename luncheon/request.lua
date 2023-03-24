@@ -29,7 +29,7 @@ Request.__index = Request
 ---@return {method:string,url:table,http_version:string}|nil table
 ---@return nil|string
 function Request._parse_preamble(line)
-  local start, _, method, path, http_version = string.find(line, "([A-Z]+) (.+) HTTP/([0-9.]+)")
+  local start, _, method, path, http_version = string.find(line, "([^ ]+) (.+) HTTP/([0-9.]+)")
   if not start then
     return nil, string.format('Invalid http request first line: "%s"', line)
   end
