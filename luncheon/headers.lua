@@ -215,11 +215,13 @@ end
 
 ---Insert a single key value pair to the collection will duplicate existing keys
 ---@param key string
----@param value string
+---@param value string|nil
 ---@return Headers
 function Headers:append(key, value)
   key = Headers.normalize_key(key)
-  _append(self._inner, key, value)
+  -- because parsing a value-less header line populates the map with an empty string,
+  -- we normalize passed nil values to empty string.
+  _append(self._inner, key, (value or ''))
   self._last_key = key
   return self
 end
@@ -230,6 +232,7 @@ end
 ---@return Headers
 function Headers:replace(key, value)
   key = Headers.normalize_key(key)
+  -- We *don't* normalize here, to allow for nil'ing out a key.
   self._inner[key] = value
   self._last_key = key
   return self
