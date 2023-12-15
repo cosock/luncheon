@@ -17,7 +17,6 @@ local shared = require "luncheon.shared"
 ---@field private _parsed_headers boolean
 ---@field private _received_body boolean
 ---@field private _send_state {stage: string, sent: integer}
----@field public mode Mode
 ---@field public trailers Headers|nil The HTTP trailers
 local Response = {}
 Response.__index = Response
@@ -34,7 +33,6 @@ function Response.source(source)
     headers = Headers.new(),
     _source = source,
     _parsed_headers = false,
-    mode = shared.Mode.Incoming,
   }, Response)
   local line, err = ret:next_line()
   if not line then
@@ -170,7 +168,6 @@ function Response.new(status_code, socket)
       _send_state = {
         stage = "none",
       },
-      mode = shared.Mode.Outgoing,
     },
     Response
   )

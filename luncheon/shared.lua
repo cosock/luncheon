@@ -3,16 +3,6 @@ local Headers = require "luncheon.headers"
 local utils = require "luncheon.utils"
 local log = require "log"
 
----@enum Mode
---- Enumeration of the 2 sources of data
-local Mode = {
-  --- This is a Request or Response constructed via `source` it will rely on pulling
-  --- new bytes from the `_source` function
-  Incoming = "incoming",
-  --- This is a Request or Response constructed via `new` it will assume all the
-  --- properties have been filled manually
-  Outgoing = "outgoing",
-}
 local SharedLogic = {}
 local CHUNKED = "chunked"
 
@@ -264,7 +254,7 @@ end
 ---@param self Request|Response
 ---@return nil|string
 function SharedLogic.fill_body(self)
-  if self.mode == Mode.Incoming
+  if self._source ~= nil
       and not self._received_body then
     local ty, err = SharedLogic.body_type(self)
     if not ty then
@@ -313,7 +303,7 @@ end
 ---@return Headers|nil
 ---@return nil|string
 function SharedLogic.get_headers(self)
-  if self.mode == Mode.Incoming and not self._parsed_headers then
+  if self._source ~= nil and not self._parsed_headers then
     local err = SharedLogic.fill_headers(self)
     if err ~= nil then
       return nil, err
@@ -404,7 +394,7 @@ function SharedLogic.iter(self)
       return header .. suffix
     end
     if state == "body" then
-      if self.mode == Mode.Incoming then
+      if self._source ~= nil then
         if not body_type then
           body_type, err = SharedLogic.body_type(self)
           if not body_type then
@@ -614,5 +604,4 @@ end
 
 return {
   SharedLogic = SharedLogic,
-  Mode = Mode,
 }

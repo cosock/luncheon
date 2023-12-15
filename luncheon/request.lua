@@ -17,7 +17,6 @@ local shared = require "luncheon.shared"
 ---@field private _source fun(pat:string|number|nil):string
 ---@field private _parsed_headers boolean
 ---@field private _received_body boolean
----@field public mode Mode How this request was built
 ---@field public trailers Headers|nil The HTTP trailers
 local Request = {}
 Request.__index = Request
@@ -53,7 +52,6 @@ function Request.source(source)
   local r = {
     _source = source,
     _parsed_headers = false,
-    mode = shared.Mode.Incoming,
   }
   setmetatable(r, Request)
   local line, acc_err = r:_next_line()
@@ -170,7 +168,6 @@ function Request.new(method, url, socket)
       stage = "none",
     },
     _parsed_header = true,
-    mode = shared.Mode.Outgoing,
   }, Request)
 end
 
