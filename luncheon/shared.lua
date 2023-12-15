@@ -3,7 +3,8 @@ local Headers = require "luncheon.headers"
 local utils = require "luncheon.utils"
 local log = require "log"
 
-local SharedLogic = {}
+--- Common functionality between Request and Response objects
+local ReqResp = {}
 local CHUNKED = "chunked"
 
 ---Append a header to the `Headers` with the matching name
@@ -11,7 +12,7 @@ local CHUNKED = "chunked"
 ---@param k string
 ---@param v string|any
 ---@param name string
-function SharedLogic.append_header(self, k, v, name)
+function ReqResp.append_header(self, k, v, name)
   if not self[name] then
     self[name] = Headers.new()
   end
@@ -26,7 +27,7 @@ end
 ---@param k string
 ---@param v string|any
 ---@param name string
-function SharedLogic.replace_header(self, k, v, name)
+function ReqResp.replace_header(self, k, v, name)
   if not self[name] then
     self[name] = Headers.new()
   end
@@ -40,7 +41,7 @@ end
 ---@param key string|nil The header map key to use, defaults to "headers"
 ---@return boolean|nil
 ---@return nil|string
-function SharedLogic.read_header(self, key)
+function ReqResp.read_header(self, key)
   key = key or "headers"
   local line, err = self:_next_line()
   if not line then
@@ -63,14 +64,14 @@ end
 ---
 ---@param self Request|Response
 ---@return string|nil
-function SharedLogic.fill_headers(self, key)
+function ReqResp.fill_headers(self, key)
   key = key or "headers"
   local parsed_key = string.format("_parsed_%s", key)
   if self[parsed_key] then
     return
   end
   while true do
-    local done, err = SharedLogic.read_header(self, key)
+    local done, err = ReqResp.read_header(self, key)
     if err ~= nil then
       return err
     end
@@ -81,9 +82,9 @@ function SharedLogic.fill_headers(self, key)
   end
 end
 
-function SharedLogic.get_content_length(self)
+function ReqResp.get_content_length(self)
   if not self._parsed_headers then
-    local err = SharedLogic.fill_headers(self, "headers")
+    local err = ReqResp.fill_headers(self, "headers")
     if err then return nil, err end
   end
   if not self._content_length then
@@ -100,7 +101,7 @@ function SharedLogic.get_content_length(self)
   return self._content_length
 end
 
-function SharedLogic.includes_chunk_encoding(header)
+function ReqResp.includes_chunk_encoding(header)
   if header == CHUNKED then
     return true
   end
@@ -116,9 +117,9 @@ end
 ---@param self Request|Response
 ---@return table|nil
 ---@return nil|string
-function SharedLogic.body_type(self)
+function ReqResp.body_type(self)
   local len, headers, enc, err
-  len, err = SharedLogic.get_content_length(self)
+  len, err = ReqResp.get_content_length(self)
   if not len and err then
     return nil, err
   end
@@ -141,7 +142,7 @@ function SharedLogic.body_type(self)
     }
   end
   for _, v in ipairs(enc) do
-    if SharedLogic.includes_chunk_encoding(v) then
+    if ReqResp.includes_chunk_encoding(v) then
       ty = "chunked"
       break
     end
@@ -162,7 +163,7 @@ end
 ---@param len integer
 ---@return string|nil
 ---@return nil|string
-function SharedLogic.fill_fixed_length_body(self, len)
+function ReqResp.fill_fixed_length_body(self, len)
   local body, err = self._source(len)
   if not body then
     return nil, err
@@ -174,7 +175,7 @@ end
 ---@param self Request|Response
 ---@return string|nil
 ---@return nil|string
-function SharedLogic.fill_closed_body(self)
+function ReqResp.fill_closed_body(self)
   local body, err = self._source("*a")
   if not body then
     return nil, err
@@ -185,7 +186,7 @@ end
 ---@param self Request|Response
 ---@return string|nil
 ---@return nil|string
-function SharedLogic.fill_chunked_body_step(self)
+function ReqResp.fill_chunked_body_step(self)
   -- read chunk length with trailing new lines
 
   local len, err = self._source("*l")
@@ -217,10 +218,10 @@ end
 ---@return string|nil
 ---@return nil|string
 ---@return nil|string
-function SharedLogic.fill_chunked_body(self)
+function ReqResp.fill_chunked_body(self)
   local ret, chunk, err = "", nil, nil
   repeat
-    chunk, err = SharedLogic.fill_chunked_body_step(self)
+    chunk, err = ReqResp.fill_chunked_body_step(self)
     ret = ret .. (chunk or "")
   until err
   if err == "___eof___" then
@@ -232,14 +233,14 @@ end
 ---Check for trailers and add them to the headers if present
 ---this should only be called when chunked encoding has been detected
 ---@param self table
-function SharedLogic.check_for_trailers(self)
+function ReqResp.check_for_trailers(self)
   local headers, err = self:get_headers()
   if not headers then
     return nil, err
   end
   local trailer = headers:get_all("trailer")
   for _, _header_name in ipairs(trailer or {}) do
-    local done, err = SharedLogic.read_header(self, "trailers")
+    local done, err = ReqResp.read_header(self, "trailers")
     if done then
       break
     end
@@ -253,16 +254,16 @@ end
 ---
 ---@param self Request|Response
 ---@return nil|string
-function SharedLogic.fill_body(self)
+function ReqResp.fill_body(self)
   if self._source ~= nil
       and not self._received_body then
-    local ty, err = SharedLogic.body_type(self)
+    local ty, err = ReqResp.body_type(self)
     if not ty then
       return err
     end
     local body, err
     if ty.type == "length" then
-      body, err = SharedLogic.fill_fixed_length_body(self, ty.length)
+      body, err = ReqResp.fill_fixed_length_body(self, ty.length)
       if not body then
         return err
       end
@@ -271,13 +272,13 @@ function SharedLogic.fill_body(self)
       -- will actually close, otherwise it will hang. The lack of
       -- a content-length header is not enough of a clue as the
       -- socket may be setup for keep-alive.
-      body, err = SharedLogic.fill_closed_body(self)
+      body, err = ReqResp.fill_closed_body(self)
       if not body then
         return err
       end
     else
-      body, err = SharedLogic.fill_chunked_body(self)
-      SharedLogic.check_for_trailers(self)
+      body, err = ReqResp.fill_chunked_body(self)
+      ReqResp.check_for_trailers(self)
       if not body then
         return err
       end
@@ -291,8 +292,8 @@ end
 ---@param self Request|Response
 ---@return string|nil
 ---@return nil|string
-function SharedLogic.get_body(self)
-  local err = SharedLogic.fill_body(self)
+function ReqResp.get_body(self)
+  local err = ReqResp.fill_body(self)
   if err then
     return nil, err
   end
@@ -302,9 +303,9 @@ end
 ---@param self Request|Response
 ---@return Headers|nil
 ---@return nil|string
-function SharedLogic.get_headers(self)
+function ReqResp.get_headers(self)
   if self._source ~= nil and not self._parsed_headers then
-    local err = SharedLogic.fill_headers(self)
+    local err = ReqResp.fill_headers(self)
     if err ~= nil then
       return nil, err
     end
@@ -316,7 +317,7 @@ end
 ---@param t Request|Response
 ---@return string|nil result The serialized string if nil an error occured
 ---@return nil|string err If not nil the error
-function SharedLogic.serialize(t)
+function ReqResp.serialize(t)
   local ret = ""
   for chunk in t:iter() do
     ret = ret .. chunk
@@ -327,7 +328,7 @@ end
 ---build and iterator for outbound chunked encoding
 ---@param self Request|Response
 ---@return (fun():string|nil,string|nil)|nil,nil|string
-function SharedLogic.chunked_oubtbound_body_iter(self)
+function ReqResp.chunked_oubtbound_body_iter(self)
   local chunk_size = self._chunk_size or 1024
   local body, err = self:get_body()
   if not body then
@@ -353,7 +354,7 @@ end
 ---build and iterator for outbound non-chunked encoding
 ---@param self Request|Response
 ---@return (fun():string|nil,string|nil)|nil,nil|string
-function SharedLogic.normal_body_iter(self)
+function ReqResp.normal_body_iter(self)
   local body, line, err
   body, err = self:get_body()
   if not body then
@@ -375,7 +376,7 @@ function SharedLogic.normal_body_iter(self)
   end
 end
 
-function SharedLogic.iter(self)
+function ReqResp.iter(self)
   local state = "start"
   local suffix = "\r\n"
   local header_iter = self:get_headers():iter()
@@ -396,17 +397,17 @@ function SharedLogic.iter(self)
     if state == "body" then
       if self._source ~= nil then
         if not body_type then
-          body_type, err = SharedLogic.body_type(self)
+          body_type, err = ReqResp.body_type(self)
           if not body_type then
             return nil, err
           end
         end
         if body_type.type == "chunked" then
-          local chunk, err = SharedLogic.fill_chunked_body_step(self)
+          local chunk, err = ReqResp.fill_chunked_body_step(self)
           if err == "___eof___" then
             if body_type.trailers then
               state = "trailers"
-              SharedLogic.fill_headers(self, "trailers")
+              ReqResp.fill_headers(self, "trailers")
               if self.trailers then
                 trailers_iter = self.trailers:iter()
                 local trailer = trailers_iter()
@@ -429,9 +430,9 @@ function SharedLogic.iter(self)
       end
       if not body_iter then
         if self._chunk_size then
-          body_iter, err = SharedLogic.chunked_oubtbound_body_iter(self)
+          body_iter, err = ReqResp.chunked_oubtbound_body_iter(self)
         else
-          body_iter, err = SharedLogic.normal_body_iter(self)
+          body_iter, err = ReqResp.normal_body_iter(self)
         end
         if not body_iter then
           body_iter = function() return nil, err end
@@ -476,7 +477,7 @@ end
 ---@param self Request|Response
 ---@return integer|nil
 ---@return string|nil
-function SharedLogic.send_preamble(self)
+function ReqResp.send_preamble(self)
   if self._send_state.stage ~= "none" then
     return 1 --already sent
   end
@@ -494,7 +495,7 @@ end
 ---@param max integer
 ---@return string
 ---@return integer
-function SharedLogic.build_chunk(self, max)
+function ReqResp.build_chunk(self, max)
   local buf = ""
   if self._send_state.stage == "none" then
     buf = self:_serialize_preamble() .. "\r\n"
@@ -539,7 +540,7 @@ end
 ---@param self Request|Response
 ---@return integer|nil If not nil, then successfully "sent"
 ---@return nil|string If not nil, the error message
-function SharedLogic.send_header(self)
+function ReqResp.send_header(self)
   if self._send_state.stage == "none" then
     return self:send_preamble()
   end
@@ -571,8 +572,8 @@ end
 ---the sink
 ---@return integer|nil if not nil, success
 ---@return nil|string if not nil and error message
-function SharedLogic.send_body_chunk(self)
-  local chunk, body_len = SharedLogic.build_chunk(self, 1024)
+function ReqResp.send_body_chunk(self)
+  local chunk, body_len = ReqResp.build_chunk(self, 1024)
   local s, e, i = utils.send_all(self.socket, chunk)
   if not s then
     return nil, e
@@ -585,7 +586,7 @@ end
 ---@param self Request|Response
 ---@param bytes string|nil
 ---@param skip_length boolean|nil
-function SharedLogic.send(self, bytes, skip_length)
+function ReqResp.send(self, bytes, skip_length)
   if bytes then
     self.body = self.body .. bytes
   end
@@ -594,7 +595,7 @@ function SharedLogic.send(self, bytes, skip_length)
   end
   while self._send_state.stage ~= "body"
     or (self._send_state.sent or 0) < #self.body do
-    local s, e = SharedLogic.send_body_chunk(self)
+    local s, e = ReqResp.send_body_chunk(self)
     if not s then
       return nil, e
     end
@@ -602,6 +603,4 @@ function SharedLogic.send(self, bytes, skip_length)
   return 1
 end
 
-return {
-  SharedLogic = SharedLogic,
-}
+return ReqResp

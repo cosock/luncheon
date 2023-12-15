@@ -1,7 +1,7 @@
 local Headers = require "luncheon.headers"
 local statuses = require "luncheon.status"
 local utils = require "luncheon.utils"
-local shared = require "luncheon.shared"
+local ReqResp = require "luncheon.shared"
 
 ---@class Response
 ---
@@ -106,14 +106,14 @@ function Response._parse_preamble(line)
 end
 
 function Response:get_headers()
-  return shared.SharedLogic.get_headers(self)
+  return ReqResp.get_headers(self)
 end
 
 ---Attempt to get the value from Content-Length header
 ---@return number|nil @when not `nil` the Content-Length
 ---@return string|nil @when not `nil` the error message
 function Response:get_content_length()
-  return shared.SharedLogic.get_content_length(self)
+  return ReqResp.get_content_length(self)
 end
 
 ---Get the next line from an incoming request, checking first
@@ -128,7 +128,7 @@ function Response:next_line()
 end
 
 function Response:get_body()
-  return shared.SharedLogic.get_body(self)
+  return ReqResp.get_body(self)
 end
 
 ---Receive the next line from an incoming request w/o checking
@@ -181,12 +181,12 @@ end
 ---@param value any If not a string will call tostring
 ---@return Response
 function Response:add_header(key, value)
-  shared.SharedLogic.append_header(self, key, value, "headers")
+  ReqResp.append_header(self, key, value, "headers")
   return self
 end
 
 function Response:add_trailer(key, value)
-  shared.SharedLogic.append_header(self, key, value, "trailers")
+  ReqResp.append_header(self, key, value, "trailers")
   return self
 end
 
@@ -197,7 +197,7 @@ end
 ---@param value any If not a string will call tostring
 ---@return Response
 function Response:replace_header(key, value)
-  shared.SharedLogic.replace_header(self, key, value, "headers")
+  ReqResp.replace_header(self, key, value, "headers")
   return self
 end
 
@@ -210,7 +210,7 @@ end
 ---@param value any If not a string will call tostring
 ---@return Response
 function Response:replace_trailer(key, value)
-  shared.SharedLogic.replace_header(self, key, value, "trailers")
+  ReqResp.replace_header(self, key, value, "trailers")
   return self
 end
 
@@ -241,7 +241,7 @@ end
 ---@param chunk_size integer|nil if te is "chunked" the size of the chunk to send defaults to 1024
 ---@return Response
 function Response:set_transfer_encoding(te, chunk_size)
-  if shared.SharedLogic.includes_chunk_encoding(te) then
+  if ReqResp.includes_chunk_encoding(te) then
     self._chunk_size = chunk_size or 1024
   end
   return self:replace_header("transfer_encoding", te)
@@ -251,7 +251,7 @@ end
 ---@return string|nil
 ---@return nil|string
 function Response:serialize()
-  return shared.SharedLogic.serialize(self)
+  return ReqResp.serialize(self)
 end
 
 ---Generate the first line of this response without the trailing \r\n
@@ -295,7 +295,7 @@ end
 ---for this Response
 ---@return function
 function Response:iter()
-  return shared.SharedLogic.iter(self)
+  return ReqResp.iter(self)
 end
 
 --#endregion
@@ -306,14 +306,14 @@ end
 ---@return integer|nil success
 ---@return string|nil err
 function Response:send_preamble()
-  return shared.SharedLogic.send_preamble(self)
+  return ReqResp.send_preamble(self)
 end
 
 ---Pass a single header line into the sink functions
 ---@return integer|nil If not nil, then successfully "sent"
 ---@return nil|string If not nil, the error message
 function Response:send_header()
-  return shared.SharedLogic.send_header(self)
+  return ReqResp.send_header(self)
 end
 
 ---Slice a chunk of at most 1024 bytes from `self.body` and pass it to
@@ -321,7 +321,7 @@ end
 ---@return integer|nil if not nil, success
 ---@return nil|string if not nil and error message
 function Response:send_body_chunk()
-  return shared.SharedLogic.send_body_chunk(self)
+  return ReqResp.send_body_chunk(self)
 end
 
 ---Serialize and pass the request chunks into the sink
@@ -329,7 +329,7 @@ end
 ---@return integer|nil If not nil sent successfully
 ---@return nil|string if not nil the error message
 function Response:send(bytes, skip_length)
-  return shared.SharedLogic.send(self, bytes, skip_length)
+  return ReqResp.send(self, bytes, skip_length)
 end
 
 function Response:has_sent()
