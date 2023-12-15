@@ -50,6 +50,7 @@ function Request.source(source)
     return nil, "cannot create request with nil source"
   end
   local r = {
+    headers = Headers.new(),
     _source = source,
     _parsed_headers = false,
   }
