@@ -167,7 +167,7 @@ function Request.new(method, url, socket)
     _send_state = {
       stage = "none",
     },
-    _parsed_header = true,
+    _parsed_headers = true,
   }, Request)
 end
 
