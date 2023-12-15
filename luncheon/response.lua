@@ -137,7 +137,6 @@ end
 ---@return string|nil
 function Response:_next_line()
   local line, err = self._source("*l")
-  self._recvd = (self._recvd or 0) + #(line or "")
   return line, err
 end
 
