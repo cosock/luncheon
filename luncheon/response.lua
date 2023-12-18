@@ -143,10 +143,6 @@ function Response:has_sent()
   return self._send_state.stage ~= "none"
 end
 
-function Response:_sending_body()
-  return self._send_state.stage == "body"
-end
-
 --#endregion
 
 return Response
