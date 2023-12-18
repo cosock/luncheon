@@ -1,6 +1,4 @@
-local Headers = require "luncheon.headers"
 local statuses = require "luncheon.status"
-local utils = require "luncheon.utils"
 local ReqResp = require "luncheon.shared"
 
 ---@class Response
