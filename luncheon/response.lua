@@ -19,6 +19,7 @@ local ReqResp = require "luncheon.shared"
 ---@field private _send_state {stage: string, sent: integer}
 ---@field public trailers Headers|nil The HTTP trailers
 local Response = {}
+setmetatable(Response, ReqResp)
 Response.__index = Response
 
 --#region Parser
@@ -29,25 +30,8 @@ Response.__index = Response
 ---@return Response|nil
 ---@return nil|string error if return 1 is nil the error string
 function Response.source(source)
-  local ret = setmetatable({
-    headers = Headers.new(),
-    _source = source,
-    _parsed_headers = false,
-  }, Response)
-  local line, err = ret:next_line()
-  if not line then
-    return nil, err
-  end
+  local ret, pre, err = ReqResp.source(Response, source)
 
-  -- check if line is only whitespace and move to next line
-  while line and line:match("^%s*$") and not err do
-    line, err = ret:next_line()
-  end
-  if not line then
-    return nil, err
-  end
-
-  local pre, err = Response._parse_preamble(line)
   if not pre then
     return nil, err
   end
@@ -62,15 +46,8 @@ end
 ---@return Response|nil
 ---@return nil|string
 function Response.tcp_source(socket)
-  local utils = require "luncheon.utils"
-  local ret, err = Response.source(
-    utils.tcp_socket_source(socket)
-  )
-  if not ret then
-    return nil, err
-  end
-  ret.socket = socket
-  return ret
+  local ret, err = ReqResp.tcp_source(Response, socket)
+  return ret, err
 end
 
 ---Create a response from a lua socket udp socket
@@ -78,15 +55,8 @@ end
 ---@return Response|nil
 ---@return nil|string
 function Response.udp_source(socket)
-  local utils = require "luncheon.utils"
-  local ret, err = Response.source(
-    utils.udp_socket_source(socket)
-  )
-  if not ret then
-    return nil, err
-  end
-  ret.socket = socket
-  return ret
+  local ret, err = ReqResp.udp_source(Response, socket)
+  return ret, err
 end
 
 ---Parse the first line of an incoming response
@@ -105,17 +75,6 @@ function Response._parse_preamble(line)
   }
 end
 
-function Response:get_headers()
-  return ReqResp.get_headers(self)
-end
-
----Attempt to get the value from Content-Length header
----@return number|nil @when not `nil` the Content-Length
----@return string|nil @when not `nil` the error message
-function Response:get_content_length()
-  return ReqResp.get_content_length(self)
-end
-
 ---Get the next line from an incoming request, checking first
 ---if we have reached the end of the content
 ---@return string|nil
@@ -129,15 +88,6 @@ end
 
 function Response:get_body()
   return ReqResp.get_body(self)
-end
-
----Receive the next line from an incoming request w/o checking
----the content-length header
----@return string|nil
----@return string|nil
-function Response:_next_line()
-  local line, err = self._source("*l")
-  return line, err
 end
 
 --#region builder
@@ -155,21 +105,10 @@ function Response.new(status_code, socket)
     return nil, string.format("Invalid status code %s", type(status_code))
   end
 
-  return setmetatable(
-    {
-      status = status_code or 200,
-      status_msg = statuses[status_code] or "Unknown",
-      http_version = 1.1,
-      headers = Headers.new(),
-      body = "",
-      _parsed_headers = true,
-      socket = socket,
-      _send_state = {
-        stage = "none",
-      },
-    },
-    Response
-  )
+  local ret = ReqResp.new(Response, socket)
+  ret.status = status_code or 200
+  ret.status_msg = statuses[status_code] or "Unknown"
+  return ret
 end
 
 ---Append a header to the internal headers map
@@ -246,13 +185,6 @@ function Response:set_transfer_encoding(te, chunk_size)
   return self:replace_header("transfer_encoding", te)
 end
 
----Serialize this full response into a string
----@return string|nil
----@return nil|string
-function Response:serialize()
-  return ReqResp.serialize(self)
-end
-
 ---Generate the first line of this response without the trailing \r\n
 ---@return string|nil
 function Response:_serialize_preamble()
@@ -290,46 +222,9 @@ function Response:set_status(n)
   return self
 end
 
----Creates a lua iterator returning a line (with new line characters)
----for this Response
----@return function
-function Response:iter()
-  return ReqResp.iter(self)
-end
-
 --#endregion
 
 --#region sink
-
----Serialize and pass the first line of this Request into the sink
----@return integer|nil success
----@return string|nil err
-function Response:send_preamble()
-  return ReqResp.send_preamble(self)
-end
-
----Pass a single header line into the sink functions
----@return integer|nil If not nil, then successfully "sent"
----@return nil|string If not nil, the error message
-function Response:send_header()
-  return ReqResp.send_header(self)
-end
-
----Slice a chunk of at most 1024 bytes from `self.body` and pass it to
----the sink
----@return integer|nil if not nil, success
----@return nil|string if not nil and error message
-function Response:send_body_chunk()
-  return ReqResp.send_body_chunk(self)
-end
-
----Serialize and pass the request chunks into the sink
----@param bytes string|nil the final bytes to append to the body
----@return integer|nil If not nil sent successfully
----@return nil|string if not nil the error message
-function Response:send(bytes, skip_length)
-  return ReqResp.send(self, bytes, skip_length)
-end
 
 function Response:has_sent()
   return self._send_state.stage ~= "none"

@@ -148,7 +148,7 @@ describe("Response", function()
       "",
       "1"
     }))))
-    local err = shared.SharedLogic.fill_body(r)
+    local err = shared.fill_body(r)
     assert.are.equal("bad Content-Length header", err)
   end)
   it("Response:serialize", function()

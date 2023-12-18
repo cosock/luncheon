@@ -1,6 +1,5 @@
 local net_url = require "net.url"
 local Headers = require "luncheon.headers"
-local utils = require "luncheon.utils"
 local ReqResp = require "luncheon.shared"
 
 ---@class Request
@@ -19,6 +18,7 @@ local ReqResp = require "luncheon.shared"
 ---@field private _received_body boolean
 ---@field public trailers Headers|nil The HTTP trailers
 local Request = {}
+setmetatable(Request, ReqResp)
 Request.__index = Request
 
 --#region Parser
@@ -46,31 +46,9 @@ end
 ---@return Request|nil request
 ---@return nil|string error
 function Request.source(source)
-  if not source then
-    return nil, "cannot create request with nil source"
-  end
-  local r = {
-    headers = Headers.new(),
-    _source = source,
-    _parsed_headers = false,
-  }
-  setmetatable(r, Request)
-  local line, acc_err = r:_next_line()
-  if acc_err then
-    return nil, acc_err
-  end
-
-  -- check if line is only whitespace and move to next line
-  while line and line:match("^%s*$") and not acc_err do
-    line, acc_err = r:_next_line()
-  end
-  if not line then
-    return nil, acc_err
-  end
-
-  local pre, pre_err = Request._parse_preamble(line)
+  local r, pre, err = ReqResp.source(Request, source)
   if not pre then
-    return nil, pre_err
+    return nil, err
   end
   r.http_version = pre.http_version
   r.method = pre.method
@@ -83,15 +61,8 @@ end
 ---@return Request|nil request with the first line parsed
 ---@return nil|string if not nil an error message
 function Request.tcp_source(socket)
-  local utils = require "luncheon.utils"
-  local ret, err = Request.source(
-    utils.tcp_socket_source(socket)
-  )
-  if not ret then
-    return nil, err
-  end
-  ret.socket = socket
-  return ret
+  local ret, err = ReqResp.tcp_source(Request, socket)
+  return ret, err
 end
 
 ---Create a new Request with a lua socket
@@ -99,46 +70,8 @@ end
 ---@return Request|nil
 ---@return nil|string
 function Request.udp_source(socket)
-  local utils = require "luncheon.utils"
-  local ret, err = Request.source(
-    utils.udp_socket_source(socket)
-  )
-  if not ret then
-    return nil, err
-  end
-  ret.socket = socket
-  return ret
-end
-
----Get the headers for this request
----parsing the incoming stream of headers
----if not already parsed
----@return Headers|nil
----@return string|nil
-function Request:get_headers()
-  return ReqResp.get_headers(self)
-end
-
----Read a single line from the socket
----@return string|nil, string|nil
-function Request:_next_line()
-  local line, err = self._source("*l")
-  return line, err
-end
-
----Get the contents of this request's body
----if not yet received, this will read the body
----from the socket
----@return string|nil, string|nil
-function Request:get_body()
-  return ReqResp.get_body(self)
-end
-
----Get the value from the Content-Length header that should be present
----for all http requests
----@return number|nil, string|nil
-function Request:get_content_length()
-  return ReqResp.get_content_length(self)
+  local ret, err = ReqResp.udp_source(Request, socket)
+  return ret, err
 end
 
 ---@deprecated see get_content_length
@@ -155,21 +88,13 @@ end
 ---@param socket table|nil
 ---@return Request
 function Request.new(method, url, socket)
+  local ret = ReqResp.new(Request, socket)
   if type(url) == "string" then
     url = net_url.parse(url)
   end
-  return setmetatable({
-    method = string.upper(method or "GET"),
-    url = url or net_url.parse("/"),
-    headers = Headers.new(),
-    http_version = "1.1",
-    body = "",
-    socket = socket,
-    _send_state = {
-      stage = "none",
-    },
-    _parsed_headers = true,
-  }, Request)
+  ret.url = url
+  ret.method = method or "GET"
+  return ret
 end
 
 ---Add a header to the internal map of headers
@@ -287,55 +212,6 @@ function Request:_serialize_preamble()
     self.http_version)
 end
 
----Serialize this request into a single string
----@return string|nil
----@return nil|string
-function Request:serialize()
-  return ReqResp.serialize(self)
-end
-
----Serialize this request as a lua iterator that will
----provide the next line (including new line characters).
----This will split the body on any internal new lines as well
----@return fun():string
-function Request:iter()
-  return ReqResp.iter(self)
-end
-
 --#endregion Builder
-
---#region sink
-
----Serialize and pass the first line of this Request into the sink
----@return integer|nil if not nil, success
----@return nil|string if not nil and error message
-function Request:send_preamble()
-  return ReqResp.send_preamble(self)
-end
-
----Pass a single header line into the sink functions
----@return integer|nil If not nil, then successfully "sent"
----@return nil|string If not nil, the error message
-function Request:send_header()
-  return ReqResp.send_header(self)
-end
-
----Slice a chunk of at most 1024 bytes from `self.body` and pass it to
----the sink
----@return integer|nil if not nil, success
----@return nil|string if not nil and error message
-function Request:send_body_chunk()
-  return ReqResp.send_body_chunk(self)
-end
-
----Serialize and pass the request chunks into the sink
----@param bytes string|nil the final bytes to append to the body
----@return integer|nil If not nil sent successfully
----@return nil|string if not nil the error message
-function Request:send(bytes, skip_length)
-  return ReqResp.send(self, bytes, skip_length)
-end
-
---#endregion
 
 return Request

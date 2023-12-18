@@ -3,9 +3,117 @@ local Headers = require "luncheon.headers"
 local utils = require "luncheon.utils"
 local log = require "log"
 
---- Common functionality between Request and Response objects
-local ReqResp = {}
 local CHUNKED = "chunked"
+
+---@class ReqResp
+---
+---An HTTP ReqResp which represents common functionality between requests and responses
+---
+---@field public headers Headers The HTTP headers for this ReqResp
+---@field public body string the contents of the body
+---@field public http_version string
+---@field public socket table The socket to send/receive on
+---@field private _source fun(pat:string|number|nil):string
+---@field private _parsed_headers boolean
+---@field private _received_body boolean
+---@field private _send_state {stage: string, sent: integer}
+---@field public trailers Headers|nil The HTTP trailers
+local ReqResp = {}
+ReqResp.__index = ReqResp
+
+function ReqResp:new(socket)
+  local o = {
+    _parsed_headers = true,
+    _send_state = {
+      stage = "none"
+    },
+    http_version = 1.1,
+    headers = Headers.new(),
+    body = "",
+    socket = socket,
+  }
+  setmetatable(o, self)
+  self.__index = self
+  return o
+end
+
+---Construct a ReqResp from a source function
+---@param source fun(pat:string|number|nil):string|nil,nil|string
+---@return ReqResp|nil reqresp
+---@return table|string|nil preamble
+---@return nil|string error
+function ReqResp:source(source)
+  if not source then
+    return nil, nil, "cannot create request/response with nil source"
+  end
+  local o = {
+    headers = Headers.new(),
+    _source = source,
+    _parsed_headers = false,
+  }
+  setmetatable(o, self)
+
+  -- Parse source lines to preamble
+  local line, err = o:_next_line()
+  if err then
+    return nil, nil, err
+  end
+
+  -- check if line is only whitespace and move to next line
+  while line and line:match("^%s*$") and not err do
+    line, err = o:_next_line()
+  end
+  if not line then
+    return nil, nil, err
+  end
+
+  local pre, pre_err = o._parse_preamble(line)
+  if not pre then
+    return nil, nil, pre_err
+  end
+
+  return o, pre
+end
+
+---Create a ReqResp from a lua socket tcp socket
+---@param socket table tcp socket
+---@return ReqResp|nil
+---@return nil|string
+function ReqResp:tcp_source(socket)
+  local ret, err = self.source(
+    utils.tcp_socket_source(socket)
+  )
+  if not ret then
+    return nil, err
+  end
+  ret.socket = socket
+  return ret
+end
+
+---Create a response from a lua socket udp socket
+---@param socket table udp socket
+---@return ReqResp|nil
+---@return nil|string
+function ReqResp:udp_source(socket)
+  local utils = require "luncheon.utils"
+  local ret, err = self.source(
+    utils.udp_socket_source(socket)
+  )
+  if not ret then
+    return nil, err
+  end
+  ret.socket = socket
+  return ret
+end
+
+function ReqResp:_next_line()
+  local line, err = self._source("*l")
+  return line, err
+end
+
+function ReqResp:_parse_preamble(line)
+  error("This functionality is not common bewteen requests and response")
+end
 
 ---Append a header to the `Headers` with the matching name
 ---@param self Request|Response
