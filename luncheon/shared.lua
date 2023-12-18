@@ -112,11 +112,10 @@ function ReqResp:_next_line()
 end
 
 ---Append a header to the `Headers` with the matching name
----@param self Request|Response
 ---@param k string
 ---@param v string|any
 ---@param name string
-function ReqResp._append_header(self, k, v, name)
+function ReqResp:_append_header(k, v, name)
   if not self[name] then
     self[name] = Headers.new()
   end
@@ -127,11 +126,10 @@ function ReqResp._append_header(self, k, v, name)
 end
 
 ---Append a header to the `Headers` with the matching name
----@param self Request|Response
 ---@param k string
 ---@param v string|any
 ---@param name string
-function ReqResp._replace_header(self, k, v, name)
+function ReqResp:_replace_header(k, v, name)
   if not self[name] then
     self[name] = Headers.new()
   end
@@ -147,12 +145,11 @@ end
 ---headers
 ---note: This is only intended for use with chunk-encoding any other encoding scheme
 ---will end up ignoring these values
----@param self Request|Response
 ---@param key string The Header's key
 ---@param value string The Header's value
 ---@return ReqResp
-function ReqResp.add_header(self, key, value)
-  ReqResp._append_header(self, key, value, "headers")
+function ReqResp:add_header( key, value)
+  self:_append_header(key, value, "headers")
   return self
 end
 
@@ -160,24 +157,22 @@ end
 ---note: this is additive, so adding X-Forwarded-For twice will
 ---cause there to be multiple X-Forwarded-For entries in the serialized
 ---headers
----@param self Request|Response
 ---@param key string The Header's key
 ---@param value string The Header's value
 ---@return ReqResp
-function ReqResp.add_trailer(self, key, value)
-  ReqResp._append_header(self, key, value, "trailers")
+function ReqResp:add_trailer(key, value)
+  self:_append_header(key, value, "trailers")
   return self
 end
 
 ---Replace or append a header to the internal headers map
 ---
 ---note: this is not additive, any existing value will be lost
----@param self Request|Response
 ---@param key string
 ---@param value any If not a string will call tostring
 ---@return ReqResp
-function ReqResp.replace_header(self, key, value)
-  ReqResp._replace_header(self, key, value, "headers")
+function ReqResp:replace_header(key, value)
+  self:_replace_header(key, value, "headers")
   return self
 end
 
@@ -186,22 +181,20 @@ end
 ---note: This is not additive, any existing value will be lost
 ---note: This is only intended for use with chunk-encoding any other encoding scheme
 ---will end up ignoring these values
----@param self Request|Response
 ---@param key string
 ---@param value any If not a string will call tostring
 ---@return ReqResp
-function ReqResp.replace_trailer(self, key, value)
-  ReqResp._replace_header(self, key, value, "trailers")
+function ReqResp:replace_trailer(key, value)
+  self:_replace_header(key, value, "trailers")
   return self
 end
 
 ---Set the Content-Type header for this ReqResp
 ---convenience wrapper around self:replace_header('content_type', len)
----@param self Request|Response
 ---@param ct string The mime type to add as the Content-Type header's value
 ---@return ReqResp|nil
 ---@return nil|string
-function ReqResp.set_content_type(self, ct)
+function ReqResp:set_content_type(ct)
   if type(ct) ~= "string" then
     return nil, string.format("mime type must be a string, found %s", type(ct))
   end
@@ -209,11 +202,10 @@ function ReqResp.set_content_type(self, ct)
 end
 
 ---Set the Content-Length header for this ReqResp
----@param self Request|Response
 ---@param len number The length of the content that will be sent
 ---@return ReqResp|nil
 ---@return nil|string
-function ReqResp.set_content_length(self, len)
+function ReqResp:set_content_length(len)
   if type(len) ~= "number" then
     return nil, string.format("content length must be a number, found %s", type(len))
   end
@@ -221,11 +213,10 @@ function ReqResp.set_content_length(self, len)
 end
 
 ---Set the Transfer-Encoding header for this request by default this will be length encoding
----@param self Request|Response
 ---@param te string The transfer encoding
 ---@param chunk_size integer|nil if te is "chunked" the size of the chunk to send defaults to 1024
 ---@return Request
-function ReqResp.set_transfer_encoding(self, te, chunk_size)
+function ReqResp:set_transfer_encoding(te, chunk_size)
   if ReqResp.includes_chunk_encoding(te) then
     self._chunk_size = chunk_size or 1024
   end
@@ -233,10 +224,9 @@ function ReqResp.set_transfer_encoding(self, te, chunk_size)
 end
 
 ---Append text to the body
----@param self Request|Response
 ---@param s string the text to append
 ---@return ReqResp
-function ReqResp.append_body(self, s)
+function ReqResp:append_body(s)
   self.body = (self.body or "") .. s
   if not self._chunk_size then
     self:set_content_length(#self.body)
@@ -244,11 +234,10 @@ function ReqResp.append_body(self, s)
   return self
 end
 
----@param self Request|Response
 ---@param key string|nil The header map key to use, defaults to "headers"
 ---@return boolean|nil
 ---@return nil|string
-function ReqResp.read_header(self, key)
+function ReqResp:read_header(key)
   key = key or "headers"
   local line, err = self:_next_line()
   if not line then
@@ -269,9 +258,8 @@ function ReqResp.read_header(self, key)
 end
 
 ---
----@param self Request|Response
 ---@return string|nil
-function ReqResp.fill_headers(self, key)
+function ReqResp:fill_headers(key)
   key = key or "headers"
   local parsed_key = string.format("_parsed_%s", key)
   if self[parsed_key] then
@@ -289,7 +277,7 @@ function ReqResp.fill_headers(self, key)
   end
 end
 
-function ReqResp.get_content_length(self)
+function ReqResp:get_content_length()
   if not self._parsed_headers then
     local err = ReqResp.fill_headers(self, "headers")
     if err then return nil, err end
@@ -321,12 +309,11 @@ function ReqResp.includes_chunk_encoding(header)
 end
 
 ---Determine what type of body we are dealing with
----@param self Request|Response
 ---@return table|nil
 ---@return nil|string
-function ReqResp.body_type(self)
+function ReqResp:body_type()
   local len, headers, enc, err
-  len, err = ReqResp.get_content_length(self)
+  len, err = self:get_content_length()
   if not len and err then
     return nil, err
   end
@@ -366,11 +353,10 @@ function ReqResp.body_type(self)
 end
 
 ---fill a body based on content-length
----@param self Request|Response
 ---@param len integer
 ---@return string|nil
 ---@return nil|string
-function ReqResp.fill_fixed_length_body(self, len)
+function ReqResp:fill_fixed_length_body(len)
   local body, err = self._source(len)
   if not body then
     return nil, err
@@ -379,10 +365,9 @@ function ReqResp.fill_fixed_length_body(self, len)
 end
 
 ---fill a body by reading until the socket is closed
----@param self Request|Response
 ---@return string|nil
 ---@return nil|string
-function ReqResp.fill_closed_body(self)
+function ReqResp:fill_closed_body()
   local body, err = self._source("*a")
   if not body then
     return nil, err
@@ -390,10 +375,9 @@ function ReqResp.fill_closed_body(self)
   return body
 end
 
----@param self Request|Response
 ---@return string|nil
 ---@return nil|string
-function ReqResp.fill_chunked_body_step(self)
+function ReqResp:fill_chunked_body_step()
   -- read chunk length with trailing new lines
 
   local len, err = self._source("*l")
@@ -421,11 +405,10 @@ function ReqResp.fill_chunked_body_step(self)
   return chunk
 end
 
----@param self Request|Response
 ---@return string|nil
 ---@return nil|string
 ---@return nil|string
-function ReqResp.fill_chunked_body(self)
+function ReqResp:fill_chunked_body()
   local ret, chunk, err = "", nil, nil
   repeat
     chunk, err = ReqResp.fill_chunked_body_step(self)
@@ -439,8 +422,7 @@ end
 
 ---Check for trailers and add them to the headers if present
 ---this should only be called when chunked encoding has been detected
----@param self table
-function ReqResp.check_for_trailers(self)
+function ReqResp:check_for_trailers()
   local headers, err = self:get_headers()
   if not headers then
     return nil, err
@@ -459,18 +441,17 @@ function ReqResp.check_for_trailers(self)
 end
 
 ---
----@param self Request|Response
 ---@return nil|string
-function ReqResp.fill_body(self)
+function ReqResp:fill_body()
   if self._source ~= nil
       and not self._received_body then
-    local ty, err = ReqResp.body_type(self)
+    local ty, err = self:body_type()
     if not ty then
       return err
     end
     local body, err
     if ty.type == "length" then
-      body, err = ReqResp.fill_fixed_length_body(self, ty.length)
+      body, err = self:fill_fixed_length_body(ty.length)
       if not body then
         return err
       end
@@ -479,13 +460,13 @@ function ReqResp.fill_body(self)
       -- will actually close, otherwise it will hang. The lack of
       -- a content-length header is not enough of a clue as the
       -- socket may be setup for keep-alive.
-      body, err = ReqResp.fill_closed_body(self)
+      body, err = self:fill_closed_body()
       if not body then
         return err
       end
     else
-      body, err = ReqResp.fill_chunked_body(self)
-      ReqResp.check_for_trailers(self)
+      body, err = self:fill_chunked_body()
+      self:check_for_trailers()
       if not body then
         return err
       end
@@ -496,23 +477,21 @@ function ReqResp.fill_body(self)
 end
 
 ---
----@param self Request|Response
 ---@return string|nil
 ---@return nil|string
-function ReqResp.get_body(self)
-  local err = ReqResp.fill_body(self)
+function ReqResp:get_body()
+  local err = self:fill_body()
   if err then
     return nil, err
   end
   return self.body
 end
 
----@param self Request|Response
 ---@return Headers|nil
 ---@return nil|string
-function ReqResp.get_headers(self)
+function ReqResp:get_headers()
   if self._source ~= nil and not self._parsed_headers then
-    local err = ReqResp.fill_headers(self)
+    local err = self:fill_headers()
     if err ~= nil then
       return nil, err
     end
@@ -521,21 +500,19 @@ function ReqResp.get_headers(self)
 end
 
 --- Serailize the provide Request or Response into a string with new lines
----@param t Request|Response
 ---@return string|nil result The serialized string if nil an error occured
 ---@return nil|string err If not nil the error
-function ReqResp.serialize(t)
+function ReqResp:serialize()
   local ret = ""
-  for chunk in t:iter() do
+  for chunk in self:iter() do
     ret = ret .. chunk
   end
   return ret
 end
 
 ---build and iterator for outbound chunked encoding
----@param self Request|Response
 ---@return (fun():string|nil,string|nil)|nil,nil|string
-function ReqResp.chunked_oubtbound_body_iter(self)
+function ReqResp:chunked_oubtbound_body_iter()
   local chunk_size = self._chunk_size or 1024
   local body, err = self:get_body()
   if not body then
@@ -559,9 +536,8 @@ function ReqResp.chunked_oubtbound_body_iter(self)
 end
 
 ---build and iterator for outbound non-chunked encoding
----@param self Request|Response
 ---@return (fun():string|nil,string|nil)|nil,nil|string
-function ReqResp.normal_body_iter(self)
+function ReqResp:normal_body_iter()
   local body, line, err
   body, err = self:get_body()
   if not body then
@@ -604,17 +580,17 @@ function ReqResp.iter(self)
     if state == "body" then
       if self._source ~= nil then
         if not body_type then
-          body_type, err = ReqResp.body_type(self)
+          body_type, err = self:body_type()
           if not body_type then
             return nil, err
           end
         end
         if body_type.type == "chunked" then
-          local chunk, err = ReqResp.fill_chunked_body_step(self)
+          local chunk, err = self:fill_chunked_body_step()
           if err == "___eof___" then
             if body_type.trailers then
               state = "trailers"
-              ReqResp.fill_headers(self, "trailers")
+              self:fill_headers("trailers")
               if self.trailers then
                 trailers_iter = self.trailers:iter()
                 local trailer = trailers_iter()
@@ -637,9 +613,9 @@ function ReqResp.iter(self)
       end
       if not body_iter then
         if self._chunk_size then
-          body_iter, err = ReqResp.chunked_oubtbound_body_iter(self)
+          body_iter, err = self:chunked_oubtbound_body_iter()
         else
-          body_iter, err = ReqResp.normal_body_iter(self)
+          body_iter, err = self:normal_body_iter()
         end
         if not body_iter then
           body_iter = function() return nil, err end
@@ -681,10 +657,9 @@ function ReqResp.iter(self)
 end
 
 ---Send the first line of the Request|Response
----@param self Request|Response
 ---@return integer|nil
 ---@return string|nil
-function ReqResp.send_preamble(self)
+function ReqResp:send_preamble()
   if self._send_state.stage ~= "none" then
     return 1 --already sent
   end
@@ -698,11 +673,10 @@ function ReqResp.send_preamble(self)
 end
 
 ---Collect the preamble and headers to the provided limit
----@param self Request|Response
 ---@param max integer
 ---@return string
 ---@return integer
-function ReqResp.build_chunk(self, max)
+function ReqResp:build_chunk(max)
   local buf = ""
   if self._send_state.stage == "none" then
     buf = self:_serialize_preamble() .. "\r\n"
@@ -744,10 +718,9 @@ function ReqResp.build_chunk(self, max)
 end
 
 ---Pass a single header line into the sink functions
----@param self Request|Response
 ---@return integer|nil If not nil, then successfully "sent"
 ---@return nil|string If not nil, the error message
-function ReqResp.send_header(self)
+function ReqResp:send_header()
   if self._send_state.stage == "none" then
     return self:send_preamble()
   end
@@ -779,8 +752,8 @@ end
 ---the sink
 ---@return integer|nil if not nil, success
 ---@return nil|string if not nil and error message
-function ReqResp.send_body_chunk(self)
-  local chunk, body_len = ReqResp.build_chunk(self, 1024)
+function ReqResp:send_body_chunk()
+  local chunk, body_len = self:build_chunk(1024)
   local s, e, i = utils.send_all(self.socket, chunk)
   if not s then
     return nil, e
@@ -790,10 +763,9 @@ function ReqResp.send_body_chunk(self)
 end
 
 ---Final send of a request or response
----@param self Request|Response
 ---@param bytes string|nil
 ---@param skip_length boolean|nil
-function ReqResp.send(self, bytes, skip_length)
+function ReqResp:send(bytes, skip_length)
   if bytes then
     self.body = self.body .. bytes
   end
@@ -802,7 +774,7 @@ function ReqResp.send(self, bytes, skip_length)
   end
   while self._send_state.stage ~= "body"
     or (self._send_state.sent or 0) < #self.body do
-    local s, e = ReqResp.send_body_chunk(self)
+    local s, e = self:send_body_chunk()
     if not s then
       return nil, e
     end
