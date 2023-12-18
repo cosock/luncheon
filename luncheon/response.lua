@@ -111,80 +111,6 @@ function Response.new(status_code, socket)
   return ret
 end
 
----Append a header to the internal headers map
----
----note: this is additive, though the _last_ value is used during
----serialization
----@param key string
----@param value any If not a string will call tostring
----@return Response
-function Response:add_header(key, value)
-  ReqResp.append_header(self, key, value, "headers")
-  return self
-end
-
-function Response:add_trailer(key, value)
-  ReqResp.append_header(self, key, value, "trailers")
-  return self
-end
-
----Replace or append a header to the internal headers map
----
----note: this is not additive, any existing value will be lost
----@param key string
----@param value any If not a string will call tostring
----@return Response
-function Response:replace_header(key, value)
-  ReqResp.replace_header(self, key, value, "headers")
-  return self
-end
-
----Replace or append a trailer to the internal trailers map
----
----note: This is not additive, any existing value will be lost
----note: This is only intended for use with chunk-encoding any other encoding scheme
----will end up ignoring these values
----@param key string
----@param value any If not a string will call tostring
----@return Response
-function Response:replace_trailer(key, value)
-  ReqResp.replace_header(self, key, value, "trailers")
-  return self
-end
-
----Set the Content-Type of the outbound request
----@param s string the mime type for this request
----@return Response|nil
----@return nil|string
-function Response:set_content_type(s)
-  if type(s) ~= "string" then
-    return nil, string.format("mime type must be a string, found %s", type(s))
-  end
-  return self:replace_header("content_type", s)
-end
-
----Set the Content-Length header of the outbound response
----@param len number The length of the content that will be sent
----@return Response|nil
----@return nil|string
-function Response:set_content_length(len)
-  if type(len) ~= "number" then
-    return nil, string.format("content length must be a number, found %s", type(len))
-  end
-  return self:replace_header("content_length", string.format("%i", len))
-end
-
----Set the Transfer-Encoding header for this response by default this will be length encoding
----@param te string The transfer encoding
----@param chunk_size integer|nil if te is "chunked" the size of the chunk to send defaults to 1024
----@return Response
-function Response:set_transfer_encoding(te, chunk_size)
-  if ReqResp.includes_chunk_encoding(te) then
-    self._chunk_size = chunk_size or 1024
-  end
-  return self:replace_header("transfer_encoding", te)
-end
-
 ---Generate the first line of this response without the trailing \r\n
 ---@return string|nil
 function Response:_serialize_preamble()
@@ -193,17 +119,6 @@ function Response:_serialize_preamble()
     self.status,
     statuses[self.status] or ""
   )
-end
-
----Append text to the body
----@param s string the text to append
----@return Response
-function Response:append_body(s)
-  self.body = (self.body or "") .. s
-  if not self._chunk_size then
-    self:set_content_length(#self.body)
-  end
-  return self
 end
 
 ---Set the status for this outgoing request

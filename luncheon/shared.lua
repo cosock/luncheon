@@ -111,16 +111,12 @@ function ReqResp:_next_line()
   return line, err
 end
 
-function ReqResp:_parse_preamble(line)
-  error("This functionality is not common bewteen requests and response")
-end
-
 ---Append a header to the `Headers` with the matching name
 ---@param self Request|Response
 ---@param k string
 ---@param v string|any
 ---@param name string
-function ReqResp.append_header(self, k, v, name)
+function ReqResp._append_header(self, k, v, name)
   if not self[name] then
     self[name] = Headers.new()
   end
@@ -135,7 +131,7 @@ end
 ---@param k string
 ---@param v string|any
 ---@param name string
-function ReqResp.replace_header(self, k, v, name)
+function ReqResp._replace_header(self, k, v, name)
   if not self[name] then
     self[name] = Headers.new()
   end
@@ -143,6 +139,109 @@ function ReqResp.replace_header(self, k, v, name)
     v = tostring(v)
   end
   self[name]:replace(k, v)
+end
+
+---Add a header to the internal map of headers
+---note: this is additive, so adding X-Forwarded-For twice will
+---cause there to be multiple X-Forwarded-For entries in the serialized
+---headers
+---note: This is only intended for use with chunk-encoding any other encoding scheme
+---will end up ignoring these values
+---@param self Request|Response
+---@param key string The Header's key
+---@param value string The Header's value
+---@return ReqResp
+function ReqResp.add_header(self, key, value)
+  ReqResp._append_header(self, key, value, "headers")
+  return self
+end
+
+---Add a trailer to the internal map of trailers
+---note: this is additive, so adding X-Forwarded-For twice will
+---cause there to be multiple X-Forwarded-For entries in the serialized
+---headers
+---@param self Request|Response
+---@param key string The Header's key
+---@param value string The Header's value
+---@return ReqResp
+function ReqResp.add_trailer(self, key, value)
+  ReqResp._append_header(self, key, value, "trailers")
+  return self
+end
+
+---Replace or append a header to the internal headers map
+---
+---note: this is not additive, any existing value will be lost
+---@param self Request|Response
+---@param key string
+---@param value any If not a string will call tostring
+---@return ReqResp
+function ReqResp.replace_header(self, key, value)
+  ReqResp._replace_header(self, key, value, "headers")
+  return self
+end
+
+---Replace or append a trailer to the internal trailers map
+---
+---note: This is not additive, any existing value will be lost
+---note: This is only intended for use with chunk-encoding any other encoding scheme
+---will end up ignoring these values
+---@param self Request|Response
+---@param key string
+---@param value any If not a string will call tostring
+---@return ReqResp
+function ReqResp.replace_trailer(self, key, value)
+  ReqResp._replace_header(self, key, value, "trailers")
+  return self
+end
+
+---Set the Content-Type header for this ReqResp
+---convenience wrapper around self:replace_header('content_type', len)
+---@param self Request|Response
+---@param ct string The mime type to add as the Content-Type header's value
+---@return ReqResp|nil
+---@return nil|string
+function ReqResp.set_content_type(self, ct)
+  if type(ct) ~= "string" then
+    return nil, string.format("mime type must be a string, found %s", type(ct))
+  end
+  return self:replace_header("content_type", ct)
+end
+
+---Set the Content-Length header for this ReqResp
+---@param self Request|Response
+---@param len number The length of the content that will be sent
+---@return ReqResp|nil
+---@return nil|string
+function ReqResp.set_content_length(self, len)
+  if type(len) ~= "number" then
+    return nil, string.format("content length must be a number, found %s", type(len))
+  end
+  return self:replace_header("content_length", string.format("%i", len))
+end
+
+---Set the Transfer-Encoding header for this request by default this will be length encoding
+---@param self Request|Response
+---@param te string The transfer encoding
+---@param chunk_size integer|nil if te is "chunked" the size of the chunk to send defaults to 1024
+---@return Request
+function ReqResp.set_transfer_encoding(self, te, chunk_size)
+  if ReqResp.includes_chunk_encoding(te) then
+    self._chunk_size = chunk_size or 1024
+  end
+  return self:replace_header("transfer_encoding", te)
+end
+
+---Append text to the body
+---@param self Request|Response
+---@param s string the text to append
+---@return ReqResp
+function ReqResp.append_body(self, s)
+  self.body = (self.body or "") .. s
+  if not self._chunk_size then
+    self:set_content_length(#self.body)
+  end
+  return self
 end
 
 ---@param self Request|Response
