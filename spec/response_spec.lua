@@ -1,8 +1,7 @@
 local MockSocket = require "spec.mock_socket".MockSocket
 local Response = require "luncheon.response"
-local ltn12 = require("ltn12")
 local utils = require "luncheon.utils"
-local shared = require "luncheon.shared"
+local HttpMessage = require "luncheon.http_message"
 
 describe("Response", function()
   describe("parse_preamble", function()
@@ -148,7 +147,7 @@ describe("Response", function()
       "",
       "1"
     }))))
-    local err = shared.fill_body(r)
+    local err = HttpMessage.fill_body(r)
     assert.are.equal("bad Content-Length header", err)
   end)
   it("Response:serialize", function()

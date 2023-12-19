@@ -1,5 +1,5 @@
 local statuses = require "luncheon.status"
-local ReqResp = require "luncheon.shared"
+local HttpMessage = require "luncheon.http_message"
 
 ---@class Response
 ---
@@ -17,7 +17,7 @@ local ReqResp = require "luncheon.shared"
 ---@field private _send_state {stage: string, sent: integer}
 ---@field public trailers Headers|nil The HTTP trailers
 local Response = {}
-setmetatable(Response, ReqResp)
+setmetatable(Response, HttpMessage)
 Response.__index = Response
 
 --#region Parser
@@ -28,7 +28,7 @@ Response.__index = Response
 ---@return Response|nil
 ---@return nil|string error if return 1 is nil the error string
 function Response.source(source)
-  local ret, pre, err = ReqResp.source(Response, source)
+  local ret, pre, err = HttpMessage.source(Response, source)
 
   if not pre then
     return nil, err
@@ -44,7 +44,7 @@ end
 ---@return Response|nil
 ---@return nil|string
 function Response.tcp_source(socket)
-  local ret, err = ReqResp.tcp_source(Response, socket)
+  local ret, err = HttpMessage.tcp_source(Response, socket)
   return ret, err
 end
 
@@ -53,7 +53,7 @@ end
 ---@return Response|nil
 ---@return nil|string
 function Response.udp_source(socket)
-  local ret, err = ReqResp.udp_source(Response, socket)
+  local ret, err = HttpMessage.udp_source(Response, socket)
   return ret, err
 end
 
@@ -85,7 +85,7 @@ function Response:next_line()
 end
 
 function Response:get_body()
-  return ReqResp.get_body(self)
+  return HttpMessage.get_body(self)
 end
 
 --#region builder
@@ -103,7 +103,7 @@ function Response.new(status_code, socket)
     return nil, string.format("Invalid status code %s", type(status_code))
   end
 
-  local ret = ReqResp.new(Response, socket)
+  local ret = HttpMessage.new(Response, socket)
   ret.status = status_code or 200
   ret.status_msg = statuses[status_code] or "Unknown"
   return ret

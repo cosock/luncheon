@@ -5,11 +5,11 @@ local log = require "log"
 
 local CHUNKED = "chunked"
 
----@class ReqResp
+---@class HttpMessage
 ---
----An HTTP ReqResp which represents common functionality between requests and responses
+---An HTTP HttpMessage which represents common functionality between requests and responses
 ---
----@field public headers Headers The HTTP headers for this ReqResp
+---@field public headers Headers The HTTP headers for this HttpMessage
 ---@field public body string the contents of the body
 ---@field public http_version string
 ---@field public socket table The socket to send/receive on
@@ -18,10 +18,10 @@ local CHUNKED = "chunked"
 ---@field private _received_body boolean
 ---@field private _send_state {stage: string, sent: integer}
 ---@field public trailers Headers|nil The HTTP trailers
-local ReqResp = {}
-ReqResp.__index = ReqResp
+local HttpMessage = {}
+HttpMessage.__index = HttpMessage
 
-function ReqResp:new(socket)
+function HttpMessage:new(socket)
   local o = {
     _parsed_headers = true,
     _send_state = {
@@ -37,12 +37,12 @@ function ReqResp:new(socket)
   return o
 end
 
----Construct a ReqResp from a source function
+---Construct a HttpMessage from a source function
 ---@param source fun(pat:string|number|nil):string|nil,nil|string
----@return ReqResp|nil reqresp
+---@return HttpMessage|nil reqresp
 ---@return table|string|nil preamble
 ---@return nil|string error
-function ReqResp:source(source)
+function HttpMessage:source(source)
   if not source then
     return nil, nil, "cannot create request/response with nil source"
   end
@@ -75,11 +75,11 @@ function ReqResp:source(source)
   return o, pre
 end
 
----Create a ReqResp from a lua socket tcp socket
+---Create a HttpMessage from a lua socket tcp socket
 ---@param socket table tcp socket
----@return ReqResp|nil
+---@return HttpMessage|nil
 ---@return nil|string
-function ReqResp:tcp_source(socket)
+function HttpMessage:tcp_source(socket)
   local ret, err = self.source(
     utils.tcp_socket_source(socket)
   )
@@ -92,9 +92,9 @@ end
 
 ---Create a response from a lua socket udp socket
 ---@param socket table udp socket
----@return ReqResp|nil
+---@return HttpMessage|nil
 ---@return nil|string
-function ReqResp:udp_source(socket)
+function HttpMessage:udp_source(socket)
   local utils = require "luncheon.utils"
   local ret, err = self.source(
     utils.udp_socket_source(socket)
@@ -106,7 +106,7 @@ function ReqResp:udp_source(socket)
   return ret
 end
 
-function ReqResp:_next_line()
+function HttpMessage:_next_line()
   local line, err = self._source("*l")
   return line, err
 end
@@ -115,7 +115,7 @@ end
 ---@param k string
 ---@param v string|any
 ---@param name string
-function ReqResp:_append_header(k, v, name)
+function HttpMessage:_append_header(k, v, name)
   if not self[name] then
     self[name] = Headers.new()
   end
@@ -129,7 +129,7 @@ end
 ---@param k string
 ---@param v string|any
 ---@param name string
-function ReqResp:_replace_header(k, v, name)
+function HttpMessage:_replace_header(k, v, name)
   if not self[name] then
     self[name] = Headers.new()
   end
@@ -147,8 +147,8 @@ end
 ---will end up ignoring these values
 ---@param key string The Header's key
 ---@param value string The Header's value
----@return ReqResp
-function ReqResp:add_header( key, value)
+---@return HttpMessage
+function HttpMessage:add_header( key, value)
   self:_append_header(key, value, "headers")
   return self
 end
@@ -159,8 +159,8 @@ end
 ---headers
 ---@param key string The Header's key
 ---@param value string The Header's value
----@return ReqResp
-function ReqResp:add_trailer(key, value)
+---@return HttpMessage
+function HttpMessage:add_trailer(key, value)
   self:_append_header(key, value, "trailers")
   return self
 end
@@ -170,8 +170,8 @@ end
 ---note: this is not additive, any existing value will be lost
 ---@param key string
 ---@param value any If not a string will call tostring
----@return ReqResp
-function ReqResp:replace_header(key, value)
+---@return HttpMessage
+function HttpMessage:replace_header(key, value)
   self:_replace_header(key, value, "headers")
   return self
 end
@@ -183,29 +183,29 @@ end
 ---will end up ignoring these values
 ---@param key string
 ---@param value any If not a string will call tostring
----@return ReqResp
-function ReqResp:replace_trailer(key, value)
+---@return HttpMessage
+function HttpMessage:replace_trailer(key, value)
   self:_replace_header(key, value, "trailers")
   return self
 end
 
----Set the Content-Type header for this ReqResp
+---Set the Content-Type header for this HttpMessage
 ---convenience wrapper around self:replace_header('content_type', len)
 ---@param ct string The mime type to add as the Content-Type header's value
----@return ReqResp|nil
+---@return HttpMessage|nil
 ---@return nil|string
-function ReqResp:set_content_type(ct)
+function HttpMessage:set_content_type(ct)
   if type(ct) ~= "string" then
     return nil, string.format("mime type must be a string, found %s", type(ct))
   end
   return self:replace_header("content_type", ct)
 end
 
----Set the Content-Length header for this ReqResp
+---Set the Content-Length header for this HttpMessage
 ---@param len number The length of the content that will be sent
----@return ReqResp|nil
+---@return HttpMessage|nil
 ---@return nil|string
-function ReqResp:set_content_length(len)
+function HttpMessage:set_content_length(len)
   if type(len) ~= "number" then
     return nil, string.format("content length must be a number, found %s", type(len))
   end
@@ -216,8 +216,8 @@ end
 ---@param te string The transfer encoding
 ---@param chunk_size integer|nil if te is "chunked" the size of the chunk to send defaults to 1024
 ---@return Request
-function ReqResp:set_transfer_encoding(te, chunk_size)
-  if ReqResp.includes_chunk_encoding(te) then
+function HttpMessage:set_transfer_encoding(te, chunk_size)
+  if HttpMessage.includes_chunk_encoding(te) then
     self._chunk_size = chunk_size or 1024
   end
   return self:replace_header("transfer_encoding", te)
@@ -225,8 +225,8 @@ end
 
 ---Append text to the body
 ---@param s string the text to append
----@return ReqResp
-function ReqResp:append_body(s)
+---@return HttpMessage
+function HttpMessage:append_body(s)
   self.body = (self.body or "") .. s
   if not self._chunk_size then
     self:set_content_length(#self.body)
@@ -237,7 +237,7 @@ end
 ---@param key string|nil The header map key to use, defaults to "headers"
 ---@return boolean|nil
 ---@return nil|string
-function ReqResp:read_header(key)
+function HttpMessage:read_header(key)
   key = key or "headers"
   local line, err = self:_next_line()
   if not line then
@@ -259,14 +259,14 @@ end
 
 ---
 ---@return string|nil
-function ReqResp:fill_headers(key)
+function HttpMessage:fill_headers(key)
   key = key or "headers"
   local parsed_key = string.format("_parsed_%s", key)
   if self[parsed_key] then
     return
   end
   while true do
-    local done, err = ReqResp.read_header(self, key)
+    local done, err = HttpMessage.read_header(self, key)
     if err ~= nil then
       return err
     end
@@ -277,9 +277,9 @@ function ReqResp:fill_headers(key)
   end
 end
 
-function ReqResp:get_content_length()
+function HttpMessage:get_content_length()
   if not self._parsed_headers then
-    local err = ReqResp.fill_headers(self, "headers")
+    local err = HttpMessage.fill_headers(self, "headers")
     if err then return nil, err end
   end
   if not self._content_length then
@@ -296,7 +296,7 @@ function ReqResp:get_content_length()
   return self._content_length
 end
 
-function ReqResp.includes_chunk_encoding(header)
+function HttpMessage.includes_chunk_encoding(header)
   if header == CHUNKED then
     return true
   end
@@ -311,7 +311,7 @@ end
 ---Determine what type of body we are dealing with
 ---@return table|nil
 ---@return nil|string
-function ReqResp:body_type()
+function HttpMessage:body_type()
   local len, headers, enc, err
   len, err = self:get_content_length()
   if not len and err then
@@ -336,7 +336,7 @@ function ReqResp:body_type()
     }
   end
   for _, v in ipairs(enc) do
-    if ReqResp.includes_chunk_encoding(v) then
+    if HttpMessage.includes_chunk_encoding(v) then
       ty = "chunked"
       break
     end
@@ -356,7 +356,7 @@ end
 ---@param len integer
 ---@return string|nil
 ---@return nil|string
-function ReqResp:fill_fixed_length_body(len)
+function HttpMessage:fill_fixed_length_body(len)
   local body, err = self._source(len)
   if not body then
     return nil, err
@@ -367,7 +367,7 @@ end
 ---fill a body by reading until the socket is closed
 ---@return string|nil
 ---@return nil|string
-function ReqResp:fill_closed_body()
+function HttpMessage:fill_closed_body()
   local body, err = self._source("*a")
   if not body then
     return nil, err
@@ -377,7 +377,7 @@ end
 
 ---@return string|nil
 ---@return nil|string
-function ReqResp:fill_chunked_body_step()
+function HttpMessage:fill_chunked_body_step()
   -- read chunk length with trailing new lines
 
   local len, err = self._source("*l")
@@ -408,10 +408,10 @@ end
 ---@return string|nil
 ---@return nil|string
 ---@return nil|string
-function ReqResp:fill_chunked_body()
+function HttpMessage:fill_chunked_body()
   local ret, chunk, err = "", nil, nil
   repeat
-    chunk, err = ReqResp.fill_chunked_body_step(self)
+    chunk, err = HttpMessage.fill_chunked_body_step(self)
     ret = ret .. (chunk or "")
   until err
   if err == "___eof___" then
@@ -422,14 +422,14 @@ end
 
 ---Check for trailers and add them to the headers if present
 ---this should only be called when chunked encoding has been detected
-function ReqResp:check_for_trailers()
+function HttpMessage:check_for_trailers()
   local headers, err = self:get_headers()
   if not headers then
     return nil, err
   end
   local trailer = headers:get_all("trailer")
   for _, _header_name in ipairs(trailer or {}) do
-    local done, err = ReqResp.read_header(self, "trailers")
+    local done, err = HttpMessage.read_header(self, "trailers")
     if done then
       break
     end
@@ -442,7 +442,7 @@ end
 
 ---
 ---@return nil|string
-function ReqResp:fill_body()
+function HttpMessage:fill_body()
   if self._source ~= nil
       and not self._received_body then
     local ty, err = self:body_type()
@@ -479,7 +479,7 @@ end
 ---
 ---@return string|nil
 ---@return nil|string
-function ReqResp:get_body()
+function HttpMessage:get_body()
   local err = self:fill_body()
   if err then
     return nil, err
@@ -489,7 +489,7 @@ end
 
 ---@return Headers|nil
 ---@return nil|string
-function ReqResp:get_headers()
+function HttpMessage:get_headers()
   if self._source ~= nil and not self._parsed_headers then
     local err = self:fill_headers()
     if err ~= nil then
@@ -502,7 +502,7 @@ end
 --- Serailize the provide Request or Response into a string with new lines
 ---@return string|nil result The serialized string if nil an error occured
 ---@return nil|string err If not nil the error
-function ReqResp:serialize()
+function HttpMessage:serialize()
   local ret = ""
   for chunk in self:iter() do
     ret = ret .. chunk
@@ -512,7 +512,7 @@ end
 
 ---build and iterator for outbound chunked encoding
 ---@return (fun():string|nil,string|nil)|nil,nil|string
-function ReqResp:chunked_oubtbound_body_iter()
+function HttpMessage:chunked_oubtbound_body_iter()
   local chunk_size = self._chunk_size or 1024
   local body, err = self:get_body()
   if not body then
@@ -537,7 +537,7 @@ end
 
 ---build and iterator for outbound non-chunked encoding
 ---@return (fun():string|nil,string|nil)|nil,nil|string
-function ReqResp:normal_body_iter()
+function HttpMessage:normal_body_iter()
   local body, line, err
   body, err = self:get_body()
   if not body then
@@ -559,7 +559,7 @@ function ReqResp:normal_body_iter()
   end
 end
 
-function ReqResp.iter(self)
+function HttpMessage.iter(self)
   local state = "start"
   local suffix = "\r\n"
   local header_iter = self:get_headers():iter()
@@ -659,7 +659,7 @@ end
 ---Send the first line of the Request|Response
 ---@return integer|nil
 ---@return string|nil
-function ReqResp:send_preamble()
+function HttpMessage:send_preamble()
   if self._send_state.stage ~= "none" then
     return 1 --already sent
   end
@@ -676,7 +676,7 @@ end
 ---@param max integer
 ---@return string
 ---@return integer
-function ReqResp:build_chunk(max)
+function HttpMessage:build_chunk(max)
   local buf = ""
   if self._send_state.stage == "none" then
     buf = self:_serialize_preamble() .. "\r\n"
@@ -720,7 +720,7 @@ end
 ---Pass a single header line into the sink functions
 ---@return integer|nil If not nil, then successfully "sent"
 ---@return nil|string If not nil, the error message
-function ReqResp:send_header()
+function HttpMessage:send_header()
   if self._send_state.stage == "none" then
     return self:send_preamble()
   end
@@ -752,7 +752,7 @@ end
 ---the sink
 ---@return integer|nil if not nil, success
 ---@return nil|string if not nil and error message
-function ReqResp:send_body_chunk()
+function HttpMessage:send_body_chunk()
   local chunk, body_len = self:build_chunk(1024)
   local s, e, i = utils.send_all(self.socket, chunk)
   if not s then
@@ -765,7 +765,7 @@ end
 ---Final send of a request or response
 ---@param bytes string|nil
 ---@param skip_length boolean|nil
-function ReqResp:send(bytes, skip_length)
+function HttpMessage:send(bytes, skip_length)
   if bytes then
     self.body = self.body .. bytes
   end
@@ -782,4 +782,4 @@ function ReqResp:send(bytes, skip_length)
   return 1
 end
 
-return ReqResp
+return HttpMessage

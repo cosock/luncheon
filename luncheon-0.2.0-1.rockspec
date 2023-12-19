@@ -19,7 +19,7 @@ build = {
       ["luncheon.headers"] = "luncheon/headers.lua",
       ["luncheon.request"] = "luncheon/request.lua",
       ["luncheon.response"] = "luncheon/response.lua",
-      ["luncheon.shared"] = "luncheon/shared.lua",
+      ["luncheon.http_message"] = "luncheon/http_message.lua",
       ["luncheon.status"] = "luncheon/status.lua",
       ["luncheon.utils"] = "luncheon/utils.lua",
    }

@@ -1,5 +1,5 @@
 local net_url = require "net.url"
-local ReqResp = require "luncheon.shared"
+local HttpMessage = require "luncheon.http_message"
 
 ---@class Request
 ---
@@ -17,7 +17,7 @@ local ReqResp = require "luncheon.shared"
 ---@field private _received_body boolean
 ---@field public trailers Headers|nil The HTTP trailers
 local Request = {}
-setmetatable(Request, ReqResp)
+setmetatable(Request, HttpMessage)
 Request.__index = Request
 
 --#region Parser
@@ -45,7 +45,7 @@ end
 ---@return Request|nil request
 ---@return nil|string error
 function Request.source(source)
-  local r, pre, err = ReqResp.source(Request, source)
+  local r, pre, err = HttpMessage.source(Request, source)
   if not pre then
     return nil, err
   end
@@ -60,7 +60,7 @@ end
 ---@return Request|nil request with the first line parsed
 ---@return nil|string if not nil an error message
 function Request.tcp_source(socket)
-  local ret, err = ReqResp.tcp_source(Request, socket)
+  local ret, err = HttpMessage.tcp_source(Request, socket)
   return ret, err
 end
 
@@ -69,7 +69,7 @@ end
 ---@return Request|nil
 ---@return nil|string
 function Request.udp_source(socket)
-  local ret, err = ReqResp.udp_source(Request, socket)
+  local ret, err = HttpMessage.udp_source(Request, socket)
   return ret, err
 end
 
@@ -87,7 +87,7 @@ end
 ---@param socket table|nil
 ---@return Request
 function Request.new(method, url, socket)
-  local ret = ReqResp.new(Request, socket)
+  local ret = HttpMessage.new(Request, socket)
   if type(url) == "string" then
     url = net_url.parse(url)
   end

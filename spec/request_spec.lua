@@ -2,7 +2,7 @@ local Request = require "luncheon.request"
 local MockSocket = require "spec.mock_socket".MockSocket
 local normal_headers = require "spec.normal_headers"
 local utils = require "luncheon.utils"
-local shared = require "luncheon.shared"
+local HttpMessage = require "luncheon.http_message"
 
 describe("Request", function()
   describe("parse_preamble", function()
@@ -65,7 +65,7 @@ describe("Request", function()
         "asdfg",
       }
       local r = assert(Request.source(utils.tcp_socket_source(MockSocket.new(lines))))
-      local e2 = shared.fill_body(r)
+      local e2 = HttpMessage.fill_body(r)
       assert(e2 == nil, "error parsing body: " .. (e2 or "nil"))
       assert.are.equal("asdfg", r.body)
     end)
