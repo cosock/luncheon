@@ -44,8 +44,7 @@ end
 ---@return Response|nil
 ---@return nil|string
 function Response.tcp_source(socket)
-  local ret, err = HttpMessage.tcp_source(Response, socket)
-  return ret, err
+  return HttpMessage.tcp_source(Response, socket)
 end
 
 ---Create a response from a lua socket udp socket
@@ -53,8 +52,7 @@ end
 ---@return Response|nil
 ---@return nil|string
 function Response.udp_source(socket)
-  local ret, err = HttpMessage.udp_source(Response, socket)
-  return ret, err
+  return HttpMessage.udp_source(Response, socket)
 end
 
 ---Parse the first line of an incoming response

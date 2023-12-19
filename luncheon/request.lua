@@ -60,8 +60,7 @@ end
 ---@return Request|nil request with the first line parsed
 ---@return nil|string if not nil an error message
 function Request.tcp_source(socket)
-  local ret, err = HttpMessage.tcp_source(Request, socket)
-  return ret, err
+  return HttpMessage.tcp_source(Request, socket)
 end
 
 ---Create a new Request with a lua socket
@@ -69,8 +68,7 @@ end
 ---@return Request|nil
 ---@return nil|string
 function Request.udp_source(socket)
-  local ret, err = HttpMessage.udp_source(Request, socket)
-  return ret, err
+  return HttpMessage.udp_source(Request, socket)
 end
 
 ---@deprecated see get_content_length
