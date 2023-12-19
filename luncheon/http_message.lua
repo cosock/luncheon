@@ -3,25 +3,119 @@ local Headers = require "luncheon.headers"
 local utils = require "luncheon.utils"
 local log = require "log"
 
----@enum Mode
---- Enumeration of the 2 sources of data
-local Mode = {
-  --- This is a Request or Response constructed via `source` it will rely on pulling
-  --- new bytes from the `_source` function
-  Incoming = "incoming",
-  --- This is a Request or Response constructed via `new` it will assume all the
-  --- properties have been filled manually
-  Outgoing = "outgoing",
-}
-local SharedLogic = {}
 local CHUNKED = "chunked"
 
+---@class HttpMessage
+---
+---An HTTP HttpMessage which represents common functionality between requests and responses
+---
+---@field public headers Headers The HTTP headers for this HttpMessage
+---@field public body string the contents of the body
+---@field public http_version string
+---@field public socket table The socket to send/receive on
+---@field private _source fun(pat:string|number|nil):string
+---@field private _parsed_headers boolean
+---@field private _received_body boolean
+---@field private _send_state {stage: string, sent: integer}
+---@field public trailers Headers|nil The HTTP trailers
+local HttpMessage = {}
+HttpMessage.__index = HttpMessage
+
+function HttpMessage:new(socket)
+  local o = {
+    _parsed_headers = true,
+    _send_state = {
+      stage = "none"
+    },
+    http_version = 1.1,
+    headers = Headers.new(),
+    body = "",
+    socket = socket,
+  }
+  setmetatable(o, self)
+  self.__index = self
+  return o
+end
+
+---Construct a HttpMessage from a source function
+---@param source fun(pat:string|number|nil):string|nil,nil|string
+---@return HttpMessage|nil reqresp
+---@return table|string|nil preamble
+---@return nil|string error
+function HttpMessage:source(source)
+  if not source then
+    return nil, nil, "cannot create request/response with nil source"
+  end
+  local o = {
+    headers = Headers.new(),
+    _source = source,
+    _parsed_headers = false,
+  }
+  setmetatable(o, self)
+
+  -- Parse source lines to preamble
+  local line, err = o:_next_line()
+  if err then
+    return nil, nil, err
+  end
+
+  -- check if line is only whitespace and move to next line
+  while line and line:match("^%s*$") and not err do
+    line, err = o:_next_line()
+  end
+  if not line then
+    return nil, nil, err
+  end
+
+  local pre, pre_err = o._parse_preamble(line)
+  if not pre then
+    return nil, nil, pre_err
+  end
+
+  return o, pre
+end
+
+---Create a HttpMessage from a lua socket tcp socket
+---@param socket table tcp socket
+---@return HttpMessage|nil
+---@return nil|string
+function HttpMessage:tcp_source(socket)
+  local ret, err = self.source(
+    utils.tcp_socket_source(socket)
+  )
+  if not ret then
+    return nil, err
+  end
+  ret.socket = socket
+  return ret
+end
+
+---Create a response from a lua socket udp socket
+---@param socket table udp socket
+---@return HttpMessage|nil
+---@return nil|string
+function HttpMessage:udp_source(socket)
+  local utils = require "luncheon.utils"
+  local ret, err = self.source(
+    utils.udp_socket_source(socket)
+  )
+  if not ret then
+    return nil, err
+  end
+  ret.socket = socket
+  return ret
+end
+
+function HttpMessage:_next_line()
+  local line, err = self._source("*l")
+  return line, err
+end
+
 ---Append a header to the `Headers` with the matching name
----@param self Request|Response
 ---@param k string
 ---@param v string|any
 ---@param name string
-function SharedLogic.append_header(self, k, v, name)
+function HttpMessage:_append_header(k, v, name)
   if not self[name] then
     self[name] = Headers.new()
   end
@@ -32,11 +126,10 @@ function SharedLogic.append_header(self, k, v, name)
 end
 
 ---Append a header to the `Headers` with the matching name
----@param self Request|Response
 ---@param k string
 ---@param v string|any
 ---@param name string
-function SharedLogic.replace_header(self, k, v, name)
+function HttpMessage:_replace_header(k, v, name)
   if not self[name] then
     self[name] = Headers.new()
   end
@@ -46,11 +139,105 @@ function SharedLogic.replace_header(self, k, v, name)
   self[name]:replace(k, v)
 end
 
----@param self Request|Response
+---Add a header to the internal map of headers
+---note: this is additive, so adding X-Forwarded-For twice will
+---cause there to be multiple X-Forwarded-For entries in the serialized
+---headers
+---note: This is only intended for use with chunk-encoding any other encoding scheme
+---will end up ignoring these values
+---@param key string The Header's key
+---@param value string The Header's value
+---@return HttpMessage
+function HttpMessage:add_header( key, value)
+  self:_append_header(key, value, "headers")
+  return self
+end
+
+---Add a trailer to the internal map of trailers
+---note: this is additive, so adding X-Forwarded-For twice will
+---cause there to be multiple X-Forwarded-For entries in the serialized
+---headers
+---@param key string The Header's key
+---@param value string The Header's value
+---@return HttpMessage
+function HttpMessage:add_trailer(key, value)
+  self:_append_header(key, value, "trailers")
+  return self
+end
+
+---Replace or append a header to the internal headers map
+---
+---note: this is not additive, any existing value will be lost
+---@param key string
+---@param value any If not a string will call tostring
+---@return HttpMessage
+function HttpMessage:replace_header(key, value)
+  self:_replace_header(key, value, "headers")
+  return self
+end
+
+---Replace or append a trailer to the internal trailers map
+---
+---note: This is not additive, any existing value will be lost
+---note: This is only intended for use with chunk-encoding any other encoding scheme
+---will end up ignoring these values
+---@param key string
+---@param value any If not a string will call tostring
+---@return HttpMessage
+function HttpMessage:replace_trailer(key, value)
+  self:_replace_header(key, value, "trailers")
+  return self
+end
+
+---Set the Content-Type header for this HttpMessage
+---convenience wrapper around self:replace_header('content_type', len)
+---@param ct string The mime type to add as the Content-Type header's value
+---@return HttpMessage|nil
+---@return nil|string
+function HttpMessage:set_content_type(ct)
+  if type(ct) ~= "string" then
+    return nil, string.format("mime type must be a string, found %s", type(ct))
+  end
+  return self:replace_header("content_type", ct)
+end
+
+---Set the Content-Length header for this HttpMessage
+---@param len number The length of the content that will be sent
+---@return HttpMessage|nil
+---@return nil|string
+function HttpMessage:set_content_length(len)
+  if type(len) ~= "number" then
+    return nil, string.format("content length must be a number, found %s", type(len))
+  end
+  return self:replace_header("content_length", string.format("%i", len))
+end
+
+---Set the Transfer-Encoding header for this request by default this will be length encoding
+---@param te string The transfer encoding
+---@param chunk_size integer|nil if te is "chunked" the size of the chunk to send defaults to 1024
+---@return Request
+function HttpMessage:set_transfer_encoding(te, chunk_size)
+  if HttpMessage.includes_chunk_encoding(te) then
+    self._chunk_size = chunk_size or 1024
+  end
+  return self:replace_header("transfer_encoding", te)
+end
+
+---Append text to the body
+---@param s string the text to append
+---@return HttpMessage
+function HttpMessage:append_body(s)
+  self.body = (self.body or "") .. s
+  if not self._chunk_size then
+    self:set_content_length(#self.body)
+  end
+  return self
+end
+
 ---@param key string|nil The header map key to use, defaults to "headers"
 ---@return boolean|nil
 ---@return nil|string
-function SharedLogic.read_header(self, key)
+function HttpMessage:read_header(key)
   key = key or "headers"
   local line, err = self:_next_line()
   if not line then
@@ -71,16 +258,15 @@ function SharedLogic.read_header(self, key)
 end
 
 ---
----@param self Request|Response
 ---@return string|nil
-function SharedLogic.fill_headers(self, key)
+function HttpMessage:fill_headers(key)
   key = key or "headers"
   local parsed_key = string.format("_parsed_%s", key)
   if self[parsed_key] then
     return
   end
   while true do
-    local done, err = SharedLogic.read_header(self, key)
+    local done, err = HttpMessage.read_header(self, key)
     if err ~= nil then
       return err
     end
@@ -91,9 +277,9 @@ function SharedLogic.fill_headers(self, key)
   end
 end
 
-function SharedLogic.get_content_length(self)
+function HttpMessage:get_content_length()
   if not self._parsed_headers then
-    local err = SharedLogic.fill_headers(self, "headers")
+    local err = HttpMessage.fill_headers(self, "headers")
     if err then return nil, err end
   end
   if not self._content_length then
@@ -110,7 +296,7 @@ function SharedLogic.get_content_length(self)
   return self._content_length
 end
 
-function SharedLogic.includes_chunk_encoding(header)
+function HttpMessage.includes_chunk_encoding(header)
   if header == CHUNKED then
     return true
   end
@@ -123,12 +309,11 @@ function SharedLogic.includes_chunk_encoding(header)
 end
 
 ---Determine what type of body we are dealing with
----@param self Request|Response
 ---@return table|nil
 ---@return nil|string
-function SharedLogic.body_type(self)
+function HttpMessage:body_type()
   local len, headers, enc, err
-  len, err = SharedLogic.get_content_length(self)
+  len, err = self:get_content_length()
   if not len and err then
     return nil, err
   end
@@ -151,7 +336,7 @@ function SharedLogic.body_type(self)
     }
   end
   for _, v in ipairs(enc) do
-    if SharedLogic.includes_chunk_encoding(v) then
+    if HttpMessage.includes_chunk_encoding(v) then
       ty = "chunked"
       break
     end
@@ -168,11 +353,10 @@ function SharedLogic.body_type(self)
 end
 
 ---fill a body based on content-length
----@param self Request|Response
 ---@param len integer
 ---@return string|nil
 ---@return nil|string
-function SharedLogic.fill_fixed_length_body(self, len)
+function HttpMessage:fill_fixed_length_body(len)
   local body, err = self._source(len)
   if not body then
     return nil, err
@@ -181,10 +365,9 @@ function SharedLogic.fill_fixed_length_body(self, len)
 end
 
 ---fill a body by reading until the socket is closed
----@param self Request|Response
 ---@return string|nil
 ---@return nil|string
-function SharedLogic.fill_closed_body(self)
+function HttpMessage:fill_closed_body()
   local body, err = self._source("*a")
   if not body then
     return nil, err
@@ -192,10 +375,9 @@ function SharedLogic.fill_closed_body(self)
   return body
 end
 
----@param self Request|Response
 ---@return string|nil
 ---@return nil|string
-function SharedLogic.fill_chunked_body_step(self)
+function HttpMessage:fill_chunked_body_step()
   -- read chunk length with trailing new lines
 
   local len, err = self._source("*l")
@@ -223,14 +405,13 @@ function SharedLogic.fill_chunked_body_step(self)
   return chunk
 end
 
----@param self Request|Response
 ---@return string|nil
 ---@return nil|string
 ---@return nil|string
-function SharedLogic.fill_chunked_body(self)
+function HttpMessage:fill_chunked_body()
   local ret, chunk, err = "", nil, nil
   repeat
-    chunk, err = SharedLogic.fill_chunked_body_step(self)
+    chunk, err = HttpMessage.fill_chunked_body_step(self)
     ret = ret .. (chunk or "")
   until err
   if err == "___eof___" then
@@ -241,15 +422,14 @@ end
 
 ---Check for trailers and add them to the headers if present
 ---this should only be called when chunked encoding has been detected
----@param self table
-function SharedLogic.check_for_trailers(self)
+function HttpMessage:check_for_trailers()
   local headers, err = self:get_headers()
   if not headers then
     return nil, err
   end
   local trailer = headers:get_all("trailer")
   for _, _header_name in ipairs(trailer or {}) do
-    local done, err = SharedLogic.read_header(self, "trailers")
+    local done, err = HttpMessage.read_header(self, "trailers")
     if done then
       break
     end
@@ -261,18 +441,17 @@ function SharedLogic.check_for_trailers(self)
 end
 
 ---
----@param self Request|Response
 ---@return nil|string
-function SharedLogic.fill_body(self)
-  if self.mode == Mode.Incoming
+function HttpMessage:fill_body()
+  if self._source ~= nil
       and not self._received_body then
-    local ty, err = SharedLogic.body_type(self)
+    local ty, err = self:body_type()
     if not ty then
       return err
     end
     local body, err
     if ty.type == "length" then
-      body, err = SharedLogic.fill_fixed_length_body(self, ty.length)
+      body, err = self:fill_fixed_length_body(ty.length)
       if not body then
         return err
       end
@@ -281,13 +460,13 @@ function SharedLogic.fill_body(self)
       -- will actually close, otherwise it will hang. The lack of
       -- a content-length header is not enough of a clue as the
       -- socket may be setup for keep-alive.
-      body, err = SharedLogic.fill_closed_body(self)
+      body, err = self:fill_closed_body()
       if not body then
         return err
       end
     else
-      body, err = SharedLogic.fill_chunked_body(self)
-      SharedLogic.check_for_trailers(self)
+      body, err = self:fill_chunked_body()
+      self:check_for_trailers()
       if not body then
         return err
       end
@@ -298,23 +477,21 @@ function SharedLogic.fill_body(self)
 end
 
 ---
----@param self Request|Response
 ---@return string|nil
 ---@return nil|string
-function SharedLogic.get_body(self)
-  local err = SharedLogic.fill_body(self)
+function HttpMessage:get_body()
+  local err = self:fill_body()
   if err then
     return nil, err
   end
   return self.body
 end
 
----@param self Request|Response
 ---@return Headers|nil
 ---@return nil|string
-function SharedLogic.get_headers(self)
-  if self.mode == Mode.Incoming and not self._parsed_headers then
-    local err = SharedLogic.fill_headers(self)
+function HttpMessage:get_headers()
+  if self._source ~= nil and not self._parsed_headers then
+    local err = self:fill_headers()
     if err ~= nil then
       return nil, err
     end
@@ -323,21 +500,19 @@ function SharedLogic.get_headers(self)
 end
 
 --- Serailize the provide Request or Response into a string with new lines
----@param t Request|Response
 ---@return string|nil result The serialized string if nil an error occured
 ---@return nil|string err If not nil the error
-function SharedLogic.serialize(t)
+function HttpMessage:serialize()
   local ret = ""
-  for chunk in t:iter() do
+  for chunk in self:iter() do
     ret = ret .. chunk
   end
   return ret
 end
 
 ---build and iterator for outbound chunked encoding
----@param self Request|Response
 ---@return (fun():string|nil,string|nil)|nil,nil|string
-function SharedLogic.chunked_oubtbound_body_iter(self)
+function HttpMessage:chunked_oubtbound_body_iter()
   local chunk_size = self._chunk_size or 1024
   local body, err = self:get_body()
   if not body then
@@ -361,9 +536,8 @@ function SharedLogic.chunked_oubtbound_body_iter(self)
 end
 
 ---build and iterator for outbound non-chunked encoding
----@param self Request|Response
 ---@return (fun():string|nil,string|nil)|nil,nil|string
-function SharedLogic.normal_body_iter(self)
+function HttpMessage:normal_body_iter()
   local body, line, err
   body, err = self:get_body()
   if not body then
@@ -385,7 +559,7 @@ function SharedLogic.normal_body_iter(self)
   end
 end
 
-function SharedLogic.iter(self)
+function HttpMessage.iter(self)
   local state = "start"
   local suffix = "\r\n"
   local header_iter = self:get_headers():iter()
@@ -404,19 +578,19 @@ function SharedLogic.iter(self)
       return header .. suffix
     end
     if state == "body" then
-      if self.mode == Mode.Incoming then
+      if self._source ~= nil then
         if not body_type then
-          body_type, err = SharedLogic.body_type(self)
+          body_type, err = self:body_type()
           if not body_type then
             return nil, err
           end
         end
         if body_type.type == "chunked" then
-          local chunk, err = SharedLogic.fill_chunked_body_step(self)
+          local chunk, err = self:fill_chunked_body_step()
           if err == "___eof___" then
             if body_type.trailers then
               state = "trailers"
-              SharedLogic.fill_headers(self, "trailers")
+              self:fill_headers("trailers")
               if self.trailers then
                 trailers_iter = self.trailers:iter()
                 local trailer = trailers_iter()
@@ -439,9 +613,9 @@ function SharedLogic.iter(self)
       end
       if not body_iter then
         if self._chunk_size then
-          body_iter, err = SharedLogic.chunked_oubtbound_body_iter(self)
+          body_iter, err = self:chunked_oubtbound_body_iter()
         else
-          body_iter, err = SharedLogic.normal_body_iter(self)
+          body_iter, err = self:normal_body_iter()
         end
         if not body_iter then
           body_iter = function() return nil, err end
@@ -483,10 +657,9 @@ function SharedLogic.iter(self)
 end
 
 ---Send the first line of the Request|Response
----@param self Request|Response
 ---@return integer|nil
 ---@return string|nil
-function SharedLogic.send_preamble(self)
+function HttpMessage:send_preamble()
   if self._send_state.stage ~= "none" then
     return 1 --already sent
   end
@@ -500,11 +673,10 @@ function SharedLogic.send_preamble(self)
 end
 
 ---Collect the preamble and headers to the provided limit
----@param self Request|Response
 ---@param max integer
 ---@return string
 ---@return integer
-function SharedLogic.build_chunk(self, max)
+function HttpMessage:build_chunk(max)
   local buf = ""
   if self._send_state.stage == "none" then
     buf = self:_serialize_preamble() .. "\r\n"
@@ -546,10 +718,9 @@ function SharedLogic.build_chunk(self, max)
 end
 
 ---Pass a single header line into the sink functions
----@param self Request|Response
 ---@return integer|nil If not nil, then successfully "sent"
 ---@return nil|string If not nil, the error message
-function SharedLogic.send_header(self)
+function HttpMessage:send_header()
   if self._send_state.stage == "none" then
     return self:send_preamble()
   end
@@ -581,8 +752,8 @@ end
 ---the sink
 ---@return integer|nil if not nil, success
 ---@return nil|string if not nil and error message
-function SharedLogic.send_body_chunk(self)
-  local chunk, body_len = SharedLogic.build_chunk(self, 1024)
+function HttpMessage:send_body_chunk()
+  local chunk, body_len = self:build_chunk(1024)
   local s, e, i = utils.send_all(self.socket, chunk)
   if not s then
     return nil, e
@@ -592,10 +763,9 @@ function SharedLogic.send_body_chunk(self)
 end
 
 ---Final send of a request or response
----@param self Request|Response
 ---@param bytes string|nil
 ---@param skip_length boolean|nil
-function SharedLogic.send(self, bytes, skip_length)
+function HttpMessage:send(bytes, skip_length)
   if bytes then
     self.body = self.body .. bytes
   end
@@ -604,7 +774,7 @@ function SharedLogic.send(self, bytes, skip_length)
   end
   while self._send_state.stage ~= "body"
     or (self._send_state.sent or 0) < #self.body do
-    local s, e = SharedLogic.send_body_chunk(self)
+    local s, e = self:send_body_chunk()
     if not s then
       return nil, e
     end
@@ -612,7 +782,4 @@ function SharedLogic.send(self, bytes, skip_length)
   return 1
 end
 
-return {
-  SharedLogic = SharedLogic,
-  Mode = Mode,
-}
+return HttpMessage

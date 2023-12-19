@@ -2,7 +2,7 @@ local Request = require "luncheon.request"
 local MockSocket = require "spec.mock_socket".MockSocket
 local normal_headers = require "spec.normal_headers"
 local utils = require "luncheon.utils"
-local shared = require "luncheon.shared"
+local HttpMessage = require "luncheon.http_message"
 
 describe("Request", function()
   describe("parse_preamble", function()
@@ -65,7 +65,7 @@ describe("Request", function()
         "asdfg",
       }
       local r = assert(Request.source(utils.tcp_socket_source(MockSocket.new(lines))))
-      local e2 = shared.SharedLogic.fill_body(r)
+      local e2 = HttpMessage.fill_body(r)
       assert(e2 == nil, "error parsing body: " .. (e2 or "nil"))
       assert.are.equal("asdfg", r.body)
     end)
@@ -230,7 +230,7 @@ describe("Request", function()
     ---@diagnostic disable-next-line: missing-parameter
     local r, err = Request.source()
     assert.is.falsy(r)
-    assert.are.equal("cannot create request with nil source", err)
+    assert.are.equal("cannot create request/response with nil source", err)
   end)
 
   it("source fails with empty socket", function()
@@ -425,7 +425,7 @@ describe("Request", function()
       it("mixed encoding works #target", function()
         local expectations = {
           { header = "", chunk_size = nil },
-          
+
         }
         local r = assert(Request.new("GET", "/", nil))
         r:set_transfer_encoding("chunked,gzip")

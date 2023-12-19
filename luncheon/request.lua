@@ -1,7 +1,5 @@
 local net_url = require "net.url"
-local Headers = require "luncheon.headers"
-local utils = require "luncheon.utils"
-local shared = require "luncheon.shared"
+local HttpMessage = require "luncheon.http_message"
 
 ---@class Request
 ---
@@ -17,9 +15,9 @@ local shared = require "luncheon.shared"
 ---@field private _source fun(pat:string|number|nil):string
 ---@field private _parsed_headers boolean
 ---@field private _received_body boolean
----@field public mode Mode How this request was built
 ---@field public trailers Headers|nil The HTTP trailers
 local Request = {}
+setmetatable(Request, HttpMessage)
 Request.__index = Request
 
 --#region Parser
@@ -47,31 +45,9 @@ end
 ---@return Request|nil request
 ---@return nil|string error
 function Request.source(source)
-  if not source then
-    return nil, "cannot create request with nil source"
-  end
-  local r = {
-    _source = source,
-    _parsed_headers = false,
-    mode = shared.Mode.Incoming,
-  }
-  setmetatable(r, Request)
-  local line, acc_err = r:_next_line()
-  if acc_err then
-    return nil, acc_err
-  end
-
-  -- check if line is only whitespace and move to next line
-  while line and line:match("^%s*$") and not acc_err do
-    line, acc_err = r:_next_line()
-  end
-  if not line then
-    return nil, acc_err
-  end
-
-  local pre, pre_err = Request._parse_preamble(line)
+  local r, pre, err = HttpMessage.source(Request, source)
   if not pre then
-    return nil, pre_err
+    return nil, err
   end
   r.http_version = pre.http_version
   r.method = pre.method
@@ -84,15 +60,7 @@ end
 ---@return Request|nil request with the first line parsed
 ---@return nil|string if not nil an error message
 function Request.tcp_source(socket)
-  local utils = require "luncheon.utils"
-  local ret, err = Request.source(
-    utils.tcp_socket_source(socket)
-  )
-  if not ret then
-    return nil, err
-  end
-  ret.socket = socket
-  return ret
+  return HttpMessage.tcp_source(Request, socket)
 end
 
 ---Create a new Request with a lua socket
@@ -100,46 +68,7 @@ end
 ---@return Request|nil
 ---@return nil|string
 function Request.udp_source(socket)
-  local utils = require "luncheon.utils"
-  local ret, err = Request.source(
-    utils.udp_socket_source(socket)
-  )
-  if not ret then
-    return nil, err
-  end
-  ret.socket = socket
-  return ret
-end
-
----Get the headers for this request
----parsing the incoming stream of headers
----if not already parsed
----@return Headers|nil
----@return string|nil
-function Request:get_headers()
-  return shared.SharedLogic.get_headers(self)
-end
-
----Read a single line from the socket
----@return string|nil, string|nil
-function Request:_next_line()
-  local line, err = self._source("*l")
-  return line, err
-end
-
----Get the contents of this request's body
----if not yet received, this will read the body
----from the socket
----@return string|nil, string|nil
-function Request:get_body()
-  return shared.SharedLogic.get_body(self)
-end
-
----Get the value from the Content-Length header that should be present
----for all http requests
----@return number|nil, string|nil
-function Request:get_content_length()
-  return shared.SharedLogic.get_content_length(self)
+  return HttpMessage.udp_source(Request, socket)
 end
 
 ---@deprecated see get_content_length
@@ -156,116 +85,13 @@ end
 ---@param socket table|nil
 ---@return Request
 function Request.new(method, url, socket)
+  local ret = HttpMessage.new(Request, socket)
   if type(url) == "string" then
     url = net_url.parse(url)
   end
-  return setmetatable({
-    method = string.upper(method or "GET"),
-    url = url or net_url.parse("/"),
-    headers = Headers.new(),
-    http_version = "1.1",
-    body = "",
-    socket = socket,
-    _send_state = {
-      stage = "none",
-    },
-    _parsed_header = true,
-    mode = shared.Mode.Outgoing,
-  }, Request)
-end
-
----Add a header to the internal map of headers
----note: this is additive, so adding X-Forwarded-For twice will
----cause there to be multiple X-Forwarded-For entries in the serialized
----headers
----note: This is only intended for use with chunk-encoding any other encoding scheme
----will end up ignoring these values
----@param key string The Header's key
----@param value string The Header's value
----@return Request
-function Request:add_header(key, value)
-  shared.SharedLogic.append_header(self, key, value, "headers")
-  return self
-end
-
----Add a trailer to the internal map of trailers
----note: this is additive, so adding X-Forwarded-For twice will
----cause there to be multiple X-Forwarded-For entries in the serialized
----headers
----@param key string The Header's key
----@param value string The Header's value
----@return Request
-function Request:add_trailer(key, value)
-  shared.SharedLogic.append_header(self, key, value, "trailers")
-  return self
-end
-
----Replace or append a header to the internal headers map
----
----note: this is not additive, any existing value will be lost
----@param key string
----@param value any If not a string will call tostring
----@return Request
-function Request:replace_header(key, value)
-  shared.SharedLogic.replace_header(self, key, value, "headers")
-  return self
-end
-
----Replace or append a trailer to the internal trailers map
----
----note: This is not additive, any existing value will be lost
----note: This is only intended for use with chunk-encoding any other encoding scheme
----will end up ignoring these values
----@param key string
----@param value any If not a string will call tostring
----@return Request
-function Request:replace_trailer(key, value)
-  shared.SharedLogic.replace_header(self, key, value, "trailers")
-  return self
-end
-
----Set the Content-Type header for this request
----convenience wrapper around self:replace_header('content_type', len)
----@param ct string The mime type to add as the Content-Type header's value
----@return Request|nil
----@return nil|string
-function Request:set_content_type(ct)
-  if type(ct) ~= "string" then
-    return nil, string.format("mime type must be a string, found %s", type(ct))
-  end
-  self:replace_header("content_type", ct)
-  return self
-end
-
----Set the Content-Length header for this request
----convenience wrapper around self:replace_header('content_length', len)
----@param len number The Expected length of the body
----@return Request
-function Request:set_content_length(len)
-  self:replace_header("content_length", tostring(len))
-  return self
-end
-
----Set the Transfer-Encoding header for this request by default this will be length encoding
----@param te string The transfer encoding
----@param chunk_size integer|nil if te is "chunked" the size of the chunk to send defaults to 1024
----@return Request
-function Request:set_transfer_encoding(te, chunk_size)
-  if shared.SharedLogic.includes_chunk_encoding(te) then
-    self._chunk_size = chunk_size or 1024
-  end
-  return self:replace_header("transfer_encoding", te)
-end
-
----append the provided chunk to this Request's body
----@param chunk string The text to add to this request's body
----@return Request
-function Request:append_body(chunk)
-  self.body = (self.body or "") .. chunk
-  if not self._chunk_size then
-    self:set_content_length(#self.body)
-  end
-  return self
+  ret.url = url
+  ret.method = method or "GET"
+  return ret
 end
 
 ---Private method for serializing the url property into a valid URL string suitable
@@ -289,55 +115,6 @@ function Request:_serialize_preamble()
     self.http_version)
 end
 
----Serialize this request into a single string
----@return string|nil
----@return nil|string
-function Request:serialize()
-  return shared.SharedLogic.serialize(self)
-end
-
----Serialize this request as a lua iterator that will
----provide the next line (including new line characters).
----This will split the body on any internal new lines as well
----@return fun():string
-function Request:iter()
-  return shared.SharedLogic.iter(self)
-end
-
 --#endregion Builder
-
---#region sink
-
----Serialize and pass the first line of this Request into the sink
----@return integer|nil if not nil, success
----@return nil|string if not nil and error message
-function Request:send_preamble()
-  return shared.SharedLogic.send_preamble(self)
-end
-
----Pass a single header line into the sink functions
----@return integer|nil If not nil, then successfully "sent"
----@return nil|string If not nil, the error message
-function Request:send_header()
-  return shared.SharedLogic.send_header(self)
-end
-
----Slice a chunk of at most 1024 bytes from `self.body` and pass it to
----the sink
----@return integer|nil if not nil, success
----@return nil|string if not nil and error message
-function Request:send_body_chunk()
-  return shared.SharedLogic.send_body_chunk(self)
-end
-
----Serialize and pass the request chunks into the sink
----@param bytes string|nil the final bytes to append to the body
----@return integer|nil If not nil sent successfully
----@return nil|string if not nil the error message
-function Request:send(bytes, skip_length)
-  return shared.SharedLogic.send(self, bytes, skip_length)
-end
-
---#endregion
 
 return Request
