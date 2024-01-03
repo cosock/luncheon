@@ -44,6 +44,7 @@
               <ul>
 <li class="toctree-l1"><a class="reference internal" href="request.html">Request</a></li>
 <li class="toctree-l1"><a class="reference internal" href="response.html">Response</a></li>
+<li class="toctree-l1"><a class="reference internal" href="http_message.html">HttpMessage</a></li>
 <li class="toctree-l1"><a class="reference internal" href="headers.html">Headers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
 <li class="toctree-l1"><a class="reference internal" href="source.html">Source</a></li>
@@ -77,6 +78,7 @@
 
 <div class="genindex-jumpbox">
  <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
  | <a href="#C"><strong>C</strong></a>
  | <a href="#E"><strong>E</strong></a>
  | <a href="#F"><strong>F</strong></a>
@@ -93,11 +95,29 @@
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="headers.html#Headers.append">append() (Headers method)</a>
+      <li><a href="http_message.html#HttpMessage.add_header">add_header() (HttpMessage method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.add_trailer">add_trailer() (HttpMessage method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="headers.html#Headers.append">append() (Headers method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.append_body">append_body() (HttpMessage method)</a>
+</li>
       <li><a href="headers.html#Headers.append_chunk">append_chunk() (Headers method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="http_message.html#HttpMessage.body_type">body_type() (HttpMessage method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="http_message.html#HttpMessage.build_chunk">build_chunk() (HttpMessage method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -105,6 +125,12 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="http_message.html#HttpMessage.check_for_trailers">check_for_trailers() (HttpMessage method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="http_message.html#HttpMessage.chunked_oubtbound_body_iter">chunked_oubtbound_body_iter() (HttpMessage method)</a>
+</li>
       <li><a href="request.html#Request.content_length">content_length() (Request method)</a>
 </li>
   </ul></td>
@@ -121,6 +147,20 @@
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="http_message.html#HttpMessage.fill_body">fill_body() (HttpMessage method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.fill_chunked_body">fill_chunked_body() (HttpMessage method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.fill_chunked_body_step">fill_chunked_body_step() (HttpMessage method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="http_message.html#HttpMessage.fill_closed_body">fill_closed_body() (HttpMessage method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.fill_fixed_length_body">fill_fixed_length_body() (HttpMessage method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.fill_headers">fill_headers() (HttpMessage method)</a>
+</li>
       <li><a href="headers.html#Headers.from_chunk">from_chunk() (Headers static method)</a>
 </li>
   </ul></td>
@@ -131,9 +171,17 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="headers.html#Headers.get_all">get_all() (Headers method)</a>
 </li>
+      <li><a href="http_message.html#HttpMessage.get_body">get_body() (HttpMessage method)</a>
+
+      <ul>
+        <li><a href="response.html#Response.get_body">(Response method)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="response.html#Response.get_body">get_body() (Response method)</a>
+      <li><a href="http_message.html#HttpMessage.get_content_length">get_content_length() (HttpMessage method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.get_headers">get_headers() (HttpMessage method)</a>
 </li>
       <li><a href="headers.html#Headers.get_one">get_one() (Headers method)</a>
 </li>
@@ -145,9 +193,21 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="response.html#Response.has_sent">has_sent() (Response method)</a>
 </li>
+      <li><a href="headers.html#Headers">Headers (built-in class)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage">HttpMessage (built-in class)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.body">HttpMessage.body (attribute)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="headers.html#Headers">Headers (built-in class)</a>
+      <li><a href="http_message.html#HttpMessage.headers">HttpMessage.headers (attribute)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.http_version">HttpMessage.http_version (attribute)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.socket">HttpMessage.socket (attribute)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.trailers">HttpMessage.trailers (attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -166,6 +226,8 @@
       <li><a href="headers.html#Headers.new">new() (Headers static method)</a>
 
       <ul>
+        <li><a href="http_message.html#HttpMessage.new">(HttpMessage method)</a>
+</li>
         <li><a href="request.html#Request.new">(Request static method)</a>
 </li>
         <li><a href="response.html#Response.new">(Response static method)</a>
@@ -179,6 +241,8 @@
         <li><a href="response.html#Response.next_line">(Response method)</a>
 </li>
       </ul></li>
+      <li><a href="http_message.html#HttpMessage.normal_body_iter">normal_body_iter() (HttpMessage method)</a>
+</li>
       <li><a href="headers.html#Headers.normalize_key">normalize_key() (Headers static method)</a>
 </li>
   </ul></td>
@@ -187,28 +251,20 @@
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="http_message.html#HttpMessage.read_header">read_header() (HttpMessage method)</a>
+</li>
       <li><a href="headers.html#Headers.replace">replace() (Headers method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.replace_header">replace_header() (HttpMessage method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.replace_trailer">replace_trailer() (HttpMessage method)</a>
 </li>
       <li><a href="request.html#Request">Request (built-in class)</a>
 </li>
-      <li><a href="request.html#Request.body">Request.body (attribute)</a>
-</li>
-      <li><a href="request.html#Request.headers">Request.headers (attribute)</a>
-</li>
-      <li><a href="request.html#Request.http_version">Request.http_version (attribute)</a>
-</li>
-      <li><a href="request.html#Request.method">Request.method (attribute)</a>
-</li>
-      <li><a href="request.html#Request.socket">Request.socket (attribute)</a>
-</li>
-      <li><a href="request.html#Request.trailers">Request.trailers (attribute)</a>
+      <li><a href="response.html#Response">Response (built-in class)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="request.html#Request.url">Request.url (attribute)</a>
-</li>
-      <li><a href="response.html#Response">Response (built-in class)</a>
-</li>
       <li><a href="response.html#Response.body">Response.body (attribute)</a>
 </li>
       <li><a href="response.html#Response.headers">Response.headers (attribute)</a>
@@ -229,19 +285,39 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="http_message.html#HttpMessage.send">send() (HttpMessage method)</a>
+</li>
       <li><a href="utils.html#utils.send_all">send_all() (in module utils)</a>
 </li>
+      <li><a href="http_message.html#HttpMessage.send_body_chunk">send_body_chunk() (HttpMessage method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.send_header">send_header() (HttpMessage method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.send_preamble">send_preamble() (HttpMessage method)</a>
+</li>
       <li><a href="headers.html#Headers.serialize">serialize() (Headers method)</a>
-</li>
-      <li><a href="headers.html#Headers.serialize_header">serialize_header() (Headers static method)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="response.html#Response.set_status">set_status() (Response method)</a>
-</li>
-      <li><a href="request.html#Request.source">source() (Request static method)</a>
 
       <ul>
+        <li><a href="http_message.html#HttpMessage.serialize">(HttpMessage method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="headers.html#Headers.serialize_header">serialize_header() (Headers static method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.set_content_length">set_content_length() (HttpMessage method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.set_content_type">set_content_type() (HttpMessage method)</a>
+</li>
+      <li><a href="response.html#Response.set_status">set_status() (Response method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.set_transfer_encoding">set_transfer_encoding() (HttpMessage method)</a>
+</li>
+      <li><a href="http_message.html#HttpMessage.source">source() (HttpMessage method)</a>
+
+      <ul>
+        <li><a href="request.html#Request.source">(Request static method)</a>
+</li>
         <li><a href="response.html#Response.source">(Response static method)</a>
 </li>
       </ul></li>
@@ -253,11 +329,11 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="utils.html#utils.tcp_socket_source">tcp_socket_source() (in module utils)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="request.html#Request.tcp_source">tcp_source() (Request static method)</a>
+      <li><a href="http_message.html#HttpMessage.tcp_source">tcp_source() (HttpMessage method)</a>
 
       <ul>
+        <li><a href="request.html#Request.tcp_source">(Request static method)</a>
+</li>
         <li><a href="response.html#Response.tcp_source">(Response static method)</a>
 </li>
       </ul></li>
@@ -269,9 +345,11 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="utils.html#utils.udp_socket_source">udp_socket_source() (in module utils)</a>
 </li>
-      <li><a href="request.html#Request.udp_source">udp_source() (Request static method)</a>
+      <li><a href="http_message.html#HttpMessage.udp_source">udp_source() (HttpMessage method)</a>
 
       <ul>
+        <li><a href="request.html#Request.udp_source">(Request static method)</a>
+</li>
         <li><a href="response.html#Response.udp_source">(Response static method)</a>
 </li>
       </ul></li>

@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HttpMessage &mdash; Luncheon</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Headers" href="headers.html" />
+    <link rel="prev" title="Response" href="response.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="request.html">Request</a></li>
+<li class="toctree-l1"><a class="reference internal" href="response.html">Response</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">HttpMessage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="headers.html">Headers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="source.html">Source</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Luncheon</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">HttpMessage</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/http_message.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="httpmessage">
+<h1>HttpMessage<a class="headerlink" href="#httpmessage" title="Link to this heading"></a></h1>
+<dl class="lua class">
+<dt class="sig sig-object lua" id="HttpMessage">
+<em class="property"><span class="pre">class</span> </em><span class="sig-name descname"><span class="pre">HttpMessage</span></span><a class="headerlink" href="#HttpMessage" title="Link to this definition"></a></dt>
+<dd><p>An HTTP HttpMessage which represents common functionality between requests and responses</p>
+<dl class="lua attribute">
+<dt class="sig sig-object lua" id="HttpMessage.headers">
+<span class="sig-name descname"><span class="pre">headers</span></span><em class="property"><span class="pre">:</span> </em><span class="pre">Headers</span><a class="headerlink" href="#HttpMessage.headers" title="Link to this definition"></a></dt>
+<dd><p>The HTTP headers for this HttpMessage</p>
+</dd></dl>
+
+<dl class="lua attribute">
+<dt class="sig sig-object lua" id="HttpMessage.body">
+<span class="sig-name descname"><span class="pre">body</span></span><em class="property"><span class="pre">:</span> </em><span class="pre">str</span><a class="headerlink" href="#HttpMessage.body" title="Link to this definition"></a></dt>
+<dd><p>the contents of the body</p>
+</dd></dl>
+
+<dl class="lua attribute">
+<dt class="sig sig-object lua" id="HttpMessage.http_version">
+<span class="sig-name descname"><span class="pre">http_version</span></span><em class="property"><span class="pre">:</span> </em><span class="pre">str</span><a class="headerlink" href="#HttpMessage.http_version" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="lua attribute">
+<dt class="sig sig-object lua" id="HttpMessage.socket">
+<span class="sig-name descname"><span class="pre">socket</span></span><em class="property"><span class="pre">:</span> </em><span class="pre">table</span><a class="headerlink" href="#HttpMessage.socket" title="Link to this definition"></a></dt>
+<dd><p>The socket to send/receive on</p>
+</dd></dl>
+
+<dl class="lua attribute">
+<dt class="sig sig-object lua" id="HttpMessage.trailers">
+<span class="sig-name descname"><span class="pre">trailers</span></span><em class="property"><span class="pre">:</span> </em><span class="pre">Headers</span> <span class="pre">or</span> <span class="pre">nil</span><a class="headerlink" href="#HttpMessage.trailers" title="Link to this definition"></a></dt>
+<dd><p>The HTTP trailers</p>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.new">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">new</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">socket</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.new" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>socket</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">any</span></code></span>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.source">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">source</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.source" title="Link to this definition"></a></dt>
+<dd><p>Construct a HttpMessage from a source function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>source</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">function</span></code></span>) – (pat:string|number|nil):string|nil,nil|string</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>reqresp</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">HttpMessage</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>preamble</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">table</span> <span class="pre">or</span> <span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>error</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.tcp_source">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">tcp_source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">socket</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.tcp_source" title="Link to this definition"></a></dt>
+<dd><p>Create a HttpMessage from a lua socket tcp socket</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>socket</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">table</span></code></span>) – tcp socket</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">HttpMessage</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.udp_source">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">udp_source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">socket</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.udp_source" title="Link to this definition"></a></dt>
+<dd><p>Create a response from a lua socket udp socket</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>socket</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">table</span></code></span>) – udp socket</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">HttpMessage</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.add_header">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">add_header</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">key</span></em>, <em class="sig-param"><span class="pre">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.add_header" title="Link to this definition"></a></dt>
+<dd><p>Add a header to the internal map of headers</p>
+<p>note: this is additive, so adding X-Forwarded-For twice will
+cause there to be multiple X-Forwarded-For entries in the serialized
+headers
+note: This is only intended for use with chunk-encoding any other encoding scheme
+will end up ignoring these values</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The Header’s key</p></li>
+<li><p><strong>value</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The Header’s value</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><a class="reference internal" href="#HttpMessage" title="HttpMessage"><code class="xref lua lua-class docutils literal notranslate"><span class="pre">HttpMessage</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.add_trailer">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">add_trailer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">key</span></em>, <em class="sig-param"><span class="pre">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.add_trailer" title="Link to this definition"></a></dt>
+<dd><p>Add a trailer to the internal map of trailers</p>
+<p>note: this is additive, so adding X-Forwarded-For twice will
+cause there to be multiple X-Forwarded-For entries in the serialized
+headers</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The Header’s key</p></li>
+<li><p><strong>value</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The Header’s value</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><a class="reference internal" href="#HttpMessage" title="HttpMessage"><code class="xref lua lua-class docutils literal notranslate"><span class="pre">HttpMessage</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.replace_header">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">replace_header</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">key</span></em>, <em class="sig-param"><span class="pre">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.replace_header" title="Link to this definition"></a></dt>
+<dd><p>Replace or append a header to the internal headers map</p>
+<p>note: this is not additive, any existing value will be lost</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – </p></li>
+<li><p><strong>value</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">any</span></code></span>) – If not a string will call tostring</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><a class="reference internal" href="#HttpMessage" title="HttpMessage"><code class="xref lua lua-class docutils literal notranslate"><span class="pre">HttpMessage</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.replace_trailer">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">replace_trailer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">key</span></em>, <em class="sig-param"><span class="pre">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.replace_trailer" title="Link to this definition"></a></dt>
+<dd><p>Replace or append a trailer to the internal trailers map</p>
+<p>note: This is not additive, any existing value will be lost
+note: This is only intended for use with chunk-encoding any other encoding scheme
+will end up ignoring these values</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – </p></li>
+<li><p><strong>value</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">any</span></code></span>) – If not a string will call tostring</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><a class="reference internal" href="#HttpMessage" title="HttpMessage"><code class="xref lua lua-class docutils literal notranslate"><span class="pre">HttpMessage</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.set_content_type">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">set_content_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">ct</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.set_content_type" title="Link to this definition"></a></dt>
+<dd><p>Set the Content-Type header for this HttpMessage</p>
+<p>convenience wrapper around self:replace_header(‘content_type’, len)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ct</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The mime type to add as the Content-Type header’s value</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">HttpMessage</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.set_content_length">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">set_content_length</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">len</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.set_content_length" title="Link to this definition"></a></dt>
+<dd><p>Set the Content-Length header for this HttpMessage</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>len</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">number</span></code></span>) – The length of the content that will be sent</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">HttpMessage</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.set_transfer_encoding">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">set_transfer_encoding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">te</span></em>, <em class="sig-param"><span class="pre">chunk_size</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.set_transfer_encoding" title="Link to this definition"></a></dt>
+<dd><p>Set the Transfer-Encoding header for this request by default this will be length encoding</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>te</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – The transfer encoding</p></li>
+<li><p><strong>chunk_size</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">integer</span> <span class="pre">or</span> <span class="pre">nil</span></code></span>) – if te is “chunked” the size of the chunk to send defaults to 1024</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><a class="reference internal" href="request.html#Request" title="Request"><code class="xref lua lua-class docutils literal notranslate"><span class="pre">Request</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.append_body">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">append_body</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">s</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.append_body" title="Link to this definition"></a></dt>
+<dd><p>Append text to the body</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – the text to append</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><a class="reference internal" href="#HttpMessage" title="HttpMessage"><code class="xref lua lua-class docutils literal notranslate"><span class="pre">HttpMessage</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.read_header">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">read_header</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">key</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.read_header" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>key</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span>) – The header map key to use, defaults to “headers”</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">boolean</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.fill_headers">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">fill_headers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.fill_headers" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.get_content_length">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">get_content_length</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.get_content_length" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.body_type">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">body_type</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.body_type" title="Link to this definition"></a></dt>
+<dd><p>Determine what type of body we are dealing with</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">table</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.fill_fixed_length_body">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">fill_fixed_length_body</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">len</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.fill_fixed_length_body" title="Link to this definition"></a></dt>
+<dd><p>fill a body based on content-length</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>len</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">integer</span></code></span>) – </p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.fill_closed_body">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">fill_closed_body</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.fill_closed_body" title="Link to this definition"></a></dt>
+<dd><p>fill a body by reading until the socket is closed</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.fill_chunked_body_step">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">fill_chunked_body_step</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.fill_chunked_body_step" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.fill_chunked_body">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">fill_chunked_body</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.fill_chunked_body" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.check_for_trailers">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">check_for_trailers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.check_for_trailers" title="Link to this definition"></a></dt>
+<dd><p>Check for trailers and add them to the headers if present</p>
+<p>this should only be called when chunked encoding has been detected</p>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.fill_body">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">fill_body</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.fill_body" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.get_body">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">get_body</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.get_body" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.get_headers">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">get_headers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.get_headers" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">Headers</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.serialize">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">serialize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.serialize" title="Link to this definition"></a></dt>
+<dd><p>Serailize the provide Request or Response into a string with new lines</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>result The serialized string if nil an error occured</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>err If not nil the error</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.chunked_oubtbound_body_iter">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">chunked_oubtbound_body_iter</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.chunked_oubtbound_body_iter" title="Link to this definition"></a></dt>
+<dd><p>build and iterator for outbound chunked encoding</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">Iterator</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.normal_body_iter">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">normal_body_iter</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.normal_body_iter" title="Link to this definition"></a></dt>
+<dd><p>build and iterator for outbound non-chunked encoding</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">Iterator</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.send_preamble">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">send_preamble</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.send_preamble" title="Link to this definition"></a></dt>
+<dd><p>Send the first line of the Request|Response</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">integer</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.build_chunk">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">build_chunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">max</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.build_chunk" title="Link to this definition"></a></dt>
+<dd><p>Collect the preamble and headers to the provided limit</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>max</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">integer</span></code></span>) – </p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">integer</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.send_header">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">send_header</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.send_header" title="Link to this definition"></a></dt>
+<dd><p>Pass a single header line into the sink functions</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>If not nil, then successfully “sent”</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">integer</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>If not nil, the error message</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.send_body_chunk">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">send_body_chunk</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.send_body_chunk" title="Link to this definition"></a></dt>
+<dd><p>Slice a chunk of at most 1024 bytes from <cite>self.body</cite> and pass it to</p>
+<p>the sink</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>if not nil, success</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">integer</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>if not nil and error message</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="HttpMessage.send">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">send</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">bytes</span></em>, <em class="sig-param"><span class="pre">skip_length</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.send" title="Link to this definition"></a></dt>
+<dd><p>Final send of a request or response</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bytes</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span>) – </p></li>
+<li><p><strong>skip_length</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">boolean</span> <span class="pre">or</span> <span class="pre">nil</span></code></span>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="response.html" class="btn btn-neutral float-left" title="Response" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="headers.html" class="btn btn-neutral float-right" title="Headers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Robert Masen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
