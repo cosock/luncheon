@@ -22,7 +22,8 @@ jobs:
             sphinx_rtd_theme
       - name: build docs
         run: sphinx-build -M html ./predocs ./docs
-
+      - name: copy assets
+        run: cp ./Luncheon.svg ./docs/html
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.ref == 'refs/heads/main' }}
