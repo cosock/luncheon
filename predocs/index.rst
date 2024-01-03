@@ -4,6 +4,7 @@
 
    request
    response
+   http_message
    headers
    utils
    source

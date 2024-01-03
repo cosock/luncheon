@@ -1,7 +1,7 @@
 local statuses = require "luncheon.status"
 local HttpMessage = require "luncheon.http_message"
 
----@class Response
+---@class Response:HttpMessage
 ---
 ---An HTTP Response
 ---
@@ -9,12 +9,12 @@ local HttpMessage = require "luncheon.http_message"
 ---@field public body string the contents of the response body
 ---@field public status number The HTTP status 3 digit number
 ---@field public status_msg string The HTTP status message
----@field public http_version string
+---@field public http_version string The HTTP version
 ---@field public socket table The socket to send/receive on
----@field private _source fun(pat:string|number|nil):string
----@field private _parsed_headers boolean
----@field private _received_body boolean
----@field private _send_state {stage: string, sent: integer}
+---@field private _source SourceFn The source for parsing
+---@field private _parsed_headers boolean The internal flag if this has parsed headers
+---@field private _received_body boolean The internal flag if this has received the body
+---@field private _send_state SendState The internal state of sending
 ---@field public trailers Headers|nil The HTTP trailers
 local Response = {}
 setmetatable(Response, HttpMessage)

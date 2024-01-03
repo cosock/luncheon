@@ -55,3 +55,6 @@ html_short_title = 'Luncheon'
 html_base_url = '/luncheon/'
 
 lua_source_path = ['./luncheon'] 
+lua_source_comment_prefix = '---'
+lua_source_use_emmy_lua_syntax = True
+lua_source_private_prefix = '_'

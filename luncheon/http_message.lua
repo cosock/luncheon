@@ -3,6 +3,10 @@ local Headers = require "luncheon.headers"
 local utils = require "luncheon.utils"
 local log = require "log"
 
+---@alias SendState {stage: string, sent: integer}
+---@alias Preamble {method:string,url:table,http_version:string}
+---@alias Iterator fun():string|nil,string|nil
+
 local CHUNKED = "chunked"
 
 ---@class HttpMessage
@@ -13,10 +17,10 @@ local CHUNKED = "chunked"
 ---@field public body string the contents of the body
 ---@field public http_version string
 ---@field public socket table The socket to send/receive on
----@field private _source fun(pat:string|number|nil):string
+---@field private _source SourceFn
 ---@field private _parsed_headers boolean
 ---@field private _received_body boolean
----@field private _send_state {stage: string, sent: integer}
+---@field private _send_state SendState
 ---@field public trailers Headers|nil The HTTP trailers
 local HttpMessage = {}
 HttpMessage.__index = HttpMessage
@@ -511,7 +515,8 @@ function HttpMessage:serialize()
 end
 
 ---build and iterator for outbound chunked encoding
----@return (fun():string|nil,string|nil)|nil,nil|string
+---@return Iterator|nil
+---@return string|nil
 function HttpMessage:chunked_oubtbound_body_iter()
   local chunk_size = self._chunk_size or 1024
   local body, err = self:get_body()
@@ -536,7 +541,8 @@ function HttpMessage:chunked_oubtbound_body_iter()
 end
 
 ---build and iterator for outbound non-chunked encoding
----@return (fun():string|nil,string|nil)|nil,nil|string
+---@return Iterator|nil
+---@return nil|string
 function HttpMessage:normal_body_iter()
   local body, line, err
   body, err = self:get_body()

@@ -4,11 +4,17 @@
 ---
 local m = {}
 
+---@alias SendFn fun(bytes: string):integer|nil,string|nil
+---@alias Sender {send: SendFn}
+---@alias ReceiveFn fun(arg1:any,arg2:any):string|nil,string|nil,string|nil
+---@alias Receiver {receive: ReceiveFn}
+---@alias SourceFn fun(pat:string|integer|nil):string|nil,string|nil,string|nil
+
 local socket_wrapper = {}
 socket_wrapper.__index = socket_wrapper
 
 ---Attempt to call the `send` method on the provided, `sock` retrying on failure or timeout
----@param sock {send: fun(any): integer|nil,nil|string} The socket to send on
+---@param sock Sender The socket to send on
 ---@param s string The string to send
 ---@return integer|nil @the number of bytes sent if not `nil`
 ---@return nil|string @the last error message encountered if not `nil`
@@ -44,8 +50,8 @@ end
 
 ---Use a luasocket api conforming table as a source function returned will attempt
 ---to call the `receive` method on the provided `socket`
----@param socket {receive: fun(any,any):string|nil,string|nil,string|nil} A tcp socket
----@return fun(pat:string|integer|nil):string|nil,string|nil,string|nil
+---@param socket Receiver A tcp socket
+---@return SourceFn
 function m.tcp_socket_source(socket)
   return function(pat)
     if pat == 0 then
@@ -76,11 +82,10 @@ function m.next_line(chunk, include_nl)
   return string.gsub(line, "[\r\n]", ""), rem
 end
 
----Get the first line from a chunk, discarding the new line characters, returning
----the line followed by the remainder of the chunk after that line
+---Split the provided chunk at the `len`
 ---@param chunk string
----@return string @If not nil, the line found, if nil no new line character was found
----@return string
+---@return string The first half of the string from the split
+---@return string The second half of the string from the split (empty if `len <= #chunk`)
 function m.extract_len(chunk, len)
   local ret = string.sub(chunk, 1, len)
   local rem = ""
@@ -92,8 +97,8 @@ end
 
 ---wrap a luasocket udp socket in a source function, this will handle finding new line
 ---characters. This will call `receive` on the provided `socket` repeatedly until a new line is found
----@param socket {receive: fun(any,any):string|nil,string|nil,string|nil}
----@return function():string|nil,string|nil,string|nil
+---@param socket Receiver a udp socket
+---@return SourceFn
 function m.udp_socket_source(socket)
   local buffer = ""
   -- If this source is called with a length argument,

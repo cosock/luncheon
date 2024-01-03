@@ -1,21 +1,7 @@
 local net_url = require "net.url"
 local HttpMessage = require "luncheon.http_message"
 
----@class Request
----
----An HTTP Request
----
----@field public method string the HTTP method for this request
----@field public url table The parsed url of this request
----@field public http_version string The http version from the request first line
----@field public headers Headers The HTTP headers for this request
----@field public body string The contents of the request's body
----@field public socket table Lua socket for receiving/sending
----@field private _send_state {stage: string, sent: integer}
----@field private _source fun(pat:string|number|nil):string
----@field private _parsed_headers boolean
----@field private _received_body boolean
----@field public trailers Headers|nil The HTTP trailers
+---@class Request:HttpMessage
 local Request = {}
 setmetatable(Request, HttpMessage)
 Request.__index = Request
@@ -24,7 +10,7 @@ Request.__index = Request
 
 ---Parse the first line of an HTTP request
 ---@param line string
----@return {method:string,url:table,http_version:string}|nil table
+---@return Preamble|nil
 ---@return nil|string
 function Request._parse_preamble(line)
   local start, _, method, path, http_version = string.find(line, "([^ ]+) (.+) HTTP/([0-9.]+)")
