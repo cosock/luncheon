@@ -1,8 +1,8 @@
 package = "luncheon"
-version = "0.2.0-1"
+version = "0.3.0-1"
 source = {
    url = "git://github.com/cosock/luncheon",
-   tag = "v0.2.0-1"
+   tag = "v0.3.0-1"
 }
 description = {
    homepage = "https://github.com/cosock/luncheon",
@@ -10,7 +10,7 @@ description = {
 }
 dependencies = {
   "net-url >= 0.9",
-   "logface >= 0.0.2"
+  "logface >= 0.0.2"
 }
 build = {
    type = "builtin",
