@@ -28,14 +28,14 @@ Response.__index = Response
 ---@return Response|nil
 ---@return nil|string error if return 1 is nil the error string
 function Response.source(source)
-  local ret, pre, err = HttpMessage.source(Response, source)
+  local ret, pre_or_err = HttpMessage.source(Response, source)
 
-  if not pre then
-    return nil, err
+  if not ret then
+    return nil, pre_or_err
   end
-  ret.status = pre.status
-  ret.status_msg = pre.status_msg
-  ret.http_version = pre.http_version
+  ret.status = pre_or_err.status
+  ret.status_msg = pre_or_err.status_msg
+  ret.http_version = pre_or_err.http_version
   return ret
 end
 

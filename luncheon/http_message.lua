@@ -13,6 +13,7 @@ local CHUNKED = "chunked"
 ---
 ---An HTTP HttpMessage which represents common functionality between requests and responses
 ---
+---@field public method string
 ---@field public headers Headers The HTTP headers for this HttpMessage
 ---@field public body string the contents of the body
 ---@field public http_version string
@@ -42,13 +43,13 @@ function HttpMessage:new(socket)
 end
 
 ---Construct a HttpMessage from a source function
----@param source fun(pat:string|number|nil):string|nil,nil|string
----@return HttpMessage|nil reqresp
----@return table|string|nil preamble
----@return nil|string error
+---@generic T: HttpMessage
+---@param source SourceFn
+---@return T|nil
+---@return table|string preamble or error
 function HttpMessage:source(source)
   if not source then
-    return nil, nil, "cannot create request/response with nil source"
+    return nil, "cannot create request/response with nil source"
   end
   local o = {
     headers = Headers.new(),
@@ -60,7 +61,7 @@ function HttpMessage:source(source)
   -- Parse source lines to preamble
   local line, err = o:_next_line()
   if err then
-    return nil, nil, err
+    return nil, err
   end
 
   -- check if line is only whitespace and move to next line
@@ -68,22 +69,24 @@ function HttpMessage:source(source)
     line, err = o:_next_line()
   end
   if not line then
-    return nil, nil, err
+    return nil, err
   end
 
   local pre, pre_err = o._parse_preamble(line)
   if not pre then
-    return nil, nil, pre_err
+    return nil, pre_err
   end
 
   return o, pre
 end
 
 ---Create a HttpMessage from a lua socket tcp socket
+---@generic T: HttpMessage
 ---@param socket table tcp socket
----@return HttpMessage|nil
+---@return T|nil
 ---@return nil|string
 function HttpMessage:tcp_source(socket)
+  ---@diagnostic disable-next-line: missing-parameter
   local ret, err = self.source(
     utils.tcp_socket_source(socket)
   )
@@ -95,8 +98,9 @@ function HttpMessage:tcp_source(socket)
 end
 
 ---Create a response from a lua socket udp socket
+---@generic T: HttpMessage
 ---@param socket table udp socket
----@return HttpMessage|nil
+---@return T|nil
 ---@return nil|string
 function HttpMessage:udp_source(socket)
   local utils = require "luncheon.utils"
@@ -217,9 +221,10 @@ function HttpMessage:set_content_length(len)
 end
 
 ---Set the Transfer-Encoding header for this request by default this will be length encoding
+---@generic T: HttpMessage
 ---@param te string The transfer encoding
 ---@param chunk_size integer|nil if te is "chunked" the size of the chunk to send defaults to 1024
----@return Request
+---@return T
 function HttpMessage:set_transfer_encoding(te, chunk_size)
   if HttpMessage.includes_chunk_encoding(te) then
     self._chunk_size = chunk_size or 1024

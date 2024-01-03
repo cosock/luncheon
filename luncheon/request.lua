@@ -31,13 +31,13 @@ end
 ---@return Request|nil request
 ---@return nil|string error
 function Request.source(source)
-  local r, pre, err = HttpMessage.source(Request, source)
-  if not pre then
-    return nil, err
+  local r, pre_or_err = HttpMessage.source(Request, source)
+  if not r then
+    return nil, pre_or_err
   end
-  r.http_version = pre.http_version
-  r.method = pre.method
-  r.url = pre.url
+  r.http_version = pre_or_err.http_version
+  r.method = pre_or_err.method
+  r.url = pre_or_err.url
   return r
 end
 
