@@ -49,6 +49,7 @@
 <li class="toctree-l1"><a class="reference internal" href="response.html">Response</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Headers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="source.html">Source</a></li>
 </ul>
 
         </div>
@@ -90,12 +91,14 @@ for any header, it will be a table of strings.</p>
 <dl class="lua staticmethod">
 <dt class="sig sig-object lua" id="Headers.serialize_header">
 <em class="property"><span class="pre">static</span> </em><span class="sig-name descname"><span class="pre">serialize_header</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">key</span></em>, <em class="sig-param"><span class="pre">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Headers.serialize_header" title="Link to this definition"></a></dt>
-<dd><p>Serialize a key value pair</p>
+<dd><p>Serialize a key value pair w/o the trailing new line</p>
+<p>If the provided value is a <cite>string[]</cite>, it will be joined with <cite>rn</cite> into one
+string, though no trailing new line will be provided</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>key</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – </p></li>
-<li><p><strong>value</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – </p></li>
+<li><p><strong>value</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">list[str]</span></code></span>) – </p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -123,6 +126,18 @@ for any header, it will be a table of strings.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>text</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – </p>
 </dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>success 1 if successful</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">integer</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>err if ret1 is <cite>nil</cite> an error message</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
 </dl>
 </dd></dl>
 
@@ -135,7 +150,21 @@ for any header, it will be a table of strings.</p>
 <dd class="field-odd"><p><strong>text</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – </p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span><a class="reference internal" href="#Headers" title="Headers"><code class="xref lua lua-class docutils literal notranslate"><span class="pre">Headers</span></code></a></span></p>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">Headers</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua staticmethod">
+<dt class="sig sig-object lua" id="Headers.new">
+<em class="property"><span class="pre">static</span> </em><span class="sig-name descname"><span class="pre">new</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Headers.new" title="Link to this definition"></a></dt>
+<dd><p>Bare constructor</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><a class="reference internal" href="#Headers" title="Headers"><code class="xref lua lua-class docutils literal notranslate"><span class="pre">Headers</span></code></a></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -158,7 +187,24 @@ for any header, it will be a table of strings.</p>
 <dl class="lua method">
 <dt class="sig sig-object lua" id="Headers.append">
 <em class="property"> </em><span class="sig-name descname"><span class="pre">append</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">key</span></em>, <em class="sig-param"><span class="pre">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Headers.append" title="Link to this definition"></a></dt>
-<dd><p>Insert a single key value pair to the collection</p>
+<dd><p>Insert a single key value pair to the collection will duplicate existing keys</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – </p></li>
+<li><p><strong>value</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><a class="reference internal" href="#Headers" title="Headers"><code class="xref lua lua-class docutils literal notranslate"><span class="pre">Headers</span></code></a></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="lua method">
+<dt class="sig sig-object lua" id="Headers.replace">
+<em class="property"> </em><span class="sig-name descname"><span class="pre">replace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">key</span></em>, <em class="sig-param"><span class="pre">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#Headers.replace" title="Link to this definition"></a></dt>
+<dd><p>Insert a single key value pair to the collection will not duplicate keys</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -213,6 +259,14 @@ useful for getting that list.</p>
 <dt class="sig sig-object lua" id="Headers.iter">
 <em class="property"> </em><span class="sig-name descname"><span class="pre">iter</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#Headers.iter" title="Link to this definition"></a></dt>
 <dd><p>Return a lua iterator over the key/value pairs in this header map</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>():string|nil</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">function</span></code></span></p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>

@@ -46,6 +46,7 @@
 <li class="toctree-l1"><a class="reference internal" href="response.html">Response</a></li>
 <li class="toctree-l1"><a class="reference internal" href="headers.html">Headers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="source.html">Source</a></li>
 </ul>
 
         </div>
@@ -92,22 +93,10 @@
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="request.html#Request.add_header">add_header() (Request method)</a>
-
-      <ul>
-        <li><a href="response.html#Response.add_header">(Response method)</a>
-</li>
-      </ul></li>
       <li><a href="headers.html#Headers.append">append() (Headers method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="request.html#Request.append_body">append_body() (Request method)</a>
-
-      <ul>
-        <li><a href="response.html#Response.append_body">(Response method)</a>
-</li>
-      </ul></li>
       <li><a href="headers.html#Headers.append_chunk">append_chunk() (Headers method)</a>
 </li>
   </ul></td>
@@ -142,22 +131,10 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="headers.html#Headers.get_all">get_all() (Headers method)</a>
 </li>
-      <li><a href="request.html#Request.get_body">get_body() (Request method)</a>
-
-      <ul>
-        <li><a href="response.html#Response.get_body">(Response method)</a>
-</li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="response.html#Response.get_content_length">get_content_length() (Response method)</a>
+      <li><a href="response.html#Response.get_body">get_body() (Response method)</a>
 </li>
-      <li><a href="request.html#Request.get_headers">get_headers() (Request method)</a>
-
-      <ul>
-        <li><a href="response.html#Response.get_headers">(Response method)</a>
-</li>
-      </ul></li>
       <li><a href="headers.html#Headers.get_one">get_one() (Headers method)</a>
 </li>
   </ul></td>
@@ -179,22 +156,18 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="headers.html#Headers.iter">iter() (Headers method)</a>
-
-      <ul>
-        <li><a href="request.html#Request.iter">(Request method)</a>
 </li>
-        <li><a href="response.html#Response.iter">(Response method)</a>
-</li>
-      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="request.html#Request.new">new() (Request static method)</a>
+      <li><a href="headers.html#Headers.new">new() (Headers static method)</a>
 
       <ul>
+        <li><a href="request.html#Request.new">(Request static method)</a>
+</li>
         <li><a href="response.html#Response.new">(Response static method)</a>
 </li>
       </ul></li>
@@ -214,6 +187,8 @@
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="headers.html#Headers.replace">replace() (Headers method)</a>
+</li>
       <li><a href="request.html#Request">Request (built-in class)</a>
 </li>
       <li><a href="request.html#Request.body">Request.body (attribute)</a>
@@ -225,6 +200,8 @@
       <li><a href="request.html#Request.method">Request.method (attribute)</a>
 </li>
       <li><a href="request.html#Request.socket">Request.socket (attribute)</a>
+</li>
+      <li><a href="request.html#Request.trailers">Request.trailers (attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -242,62 +219,24 @@
 </li>
       <li><a href="response.html#Response.status">Response.status (attribute)</a>
 </li>
+      <li><a href="response.html#Response.status_msg">Response.status_msg (attribute)</a>
+</li>
+      <li><a href="response.html#Response.trailers">Response.trailers (attribute)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="request.html#Request.send">send() (Request method)</a>
-
-      <ul>
-        <li><a href="response.html#Response.send">(Response method)</a>
-</li>
-      </ul></li>
       <li><a href="utils.html#utils.send_all">send_all() (in module utils)</a>
 </li>
-      <li><a href="request.html#Request.send_body_chunk">send_body_chunk() (Request method)</a>
-
-      <ul>
-        <li><a href="response.html#Response.send_body_chunk">(Response method)</a>
-</li>
-      </ul></li>
-      <li><a href="request.html#Request.send_header">send_header() (Request method)</a>
-
-      <ul>
-        <li><a href="response.html#Response.send_header">(Response method)</a>
-</li>
-      </ul></li>
-      <li><a href="request.html#Request.send_preamble">send_preamble() (Request method)</a>
-
-      <ul>
-        <li><a href="response.html#Response.send_preamble">(Response method)</a>
-</li>
-      </ul></li>
       <li><a href="headers.html#Headers.serialize">serialize() (Headers method)</a>
-
-      <ul>
-        <li><a href="request.html#Request.serialize">(Request method)</a>
 </li>
-        <li><a href="response.html#Response.serialize">(Response method)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="headers.html#Headers.serialize_header">serialize_header() (Headers static method)</a>
 </li>
-      <li><a href="request.html#Request.set_content_length">set_content_length() (Request method)</a>
-
-      <ul>
-        <li><a href="response.html#Response.set_content_length">(Response method)</a>
-</li>
-      </ul></li>
-      <li><a href="request.html#Request.set_content_type">set_content_type() (Request method)</a>
-
-      <ul>
-        <li><a href="response.html#Response.set_content_type">(Response method)</a>
-</li>
-      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="response.html#Response.set_status">set_status() (Response method)</a>
 </li>
       <li><a href="request.html#Request.source">source() (Request static method)</a>
