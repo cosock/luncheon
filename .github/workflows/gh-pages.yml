@@ -1,0 +1,31 @@
+name: GitHub Pages
+
+on:
+  push:
+    tags: 
+      - '*'
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v1
+      - uses: BSFishy/pip-action@v1
+        with:
+          packages: |
+            sphinx-lua
+            m2r2
+            setuptools
+            sphinx_rtd_theme
+      - name: build docs
+        run: sphinx-build -M html ./predocs ./docs
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/html

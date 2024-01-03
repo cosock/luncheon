@@ -1,5 +1,0 @@
-==========
-Utils
-==========
-
-.. lua:automodule:: utils
