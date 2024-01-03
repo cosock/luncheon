@@ -1,0 +1,33 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Sphinx
+        run: sudo apt-get install python3-sphinx
+      
+      - name: Setup Sphinx deps
+        run: pip install sphinx-rtd-theme sphinx-lua sphinxcontrib-luadomain && python3 -m pip install m2r2
+      
+      - name: Build Docs
+        run: sphinx-build -b html ./predocs ./docs
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs

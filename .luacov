@@ -43,5 +43,7 @@ return {
     "luacov/runner$",
     "luacov/stats$",
     "luacov/tick$",
+    "spec",
+    "lua_modules"
   },
 }

@@ -24,7 +24,7 @@ function MockSocket:listen(backlog)
 end
 
 function MockSocket:getsockname()
-    return '0.0.0.0', 0
+    return "0.0.0.0", 0
 end
 
 function MockSocket:getstats()
@@ -38,29 +38,29 @@ end
 
 function MockSocket.new_with_preamble(method, path)
     return MockSocket.new({
-        string.format('%s %s HTTP/1.1', string.upper(method), path)
+        string.format("%s %s HTTP/1.1", string.upper(method), path)
     })
 end
 
-function MockSocket:receive()
+function MockSocket:receive(pat)
     if #self.inner == 0 then
-        return nil, 'empty'
+        return nil, "empty"
     end
     local part = table.remove(self.inner, 1)
-    if part == 'timeout' or part == 'closed' then
+    if part == "timeout" or part == "closed" then
         return nil, part
     end
-    self.recvd = self.recvd + #(part or '')
+    self.recvd = self.recvd + #(part or "")
     return part
 end
 
 function MockSocket:send(s)
-    if s == 'timeout' or s == 'closed' or s == 'error' then
+    if s == "timeout" or s == "closed" or s == "error" then
         return nil, s
     end
-    local err, ct = string.match(s, '^(timeout)(%d)$')
+    local err, ct = string.match(s, "^(timeout)(%d)$")
     if not err then
-        err, ct = string.match(s, '^(error)(%d)$')
+        err, ct = string.match(s, "^(error)(%d)$")
     end
     if err then
         local target = math.tointeger(ct)
@@ -69,16 +69,16 @@ function MockSocket:send(s)
             return nil, err
         end
     end
-    if string.find(s, 'panic') and not self.panicked then
+    if string.find(s, "panic") and not self.panicked then
         self.panicked = true
-        error('panic')
+        error("panic")
     end
     if next(self.send_errs) then
         return nil, table.remove(self.send_errs, 1)
     end
     self.inner = self.inner or {}
-    self.sent = self.sent + #(s or '')
-    if string.find(s, 'clear') then
+    self.sent = self.sent + #(s or "")
+    if string.find(s, "clear") then
         self.inner = {}
         return
     end
@@ -114,7 +114,7 @@ function MockTcp:listen(backlog)
 end
 
 function MockTcp:getsockname()
-    return '0.0.0.0', 0
+    return "0.0.0.0", 0
 end
 
 local MockModule = {}
@@ -124,10 +124,12 @@ function MockModule.new(inner)
     sockets = inner or {}
     return MockModule
 end
+
 function MockModule.tcp()
-    local list = assert(table.remove(sockets), 'No sockets in the list')
+    local list = assert(table.remove(sockets), "No sockets in the list")
     return MockTcp.new(list)
 end
+
 function MockModule.bind(ip, port)
     return 1
 end
