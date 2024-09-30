@@ -365,10 +365,11 @@ end
 ---@param len integer
 ---@return string|nil
 ---@return nil|string
+---@return nil|string
 function HttpMessage:fill_fixed_length_body(len)
-  local body, err = self._source(len)
+  local body, err, partial = self._source(len)
   if not body then
-    return nil, err
+    return nil, err, partial
   end
   return body
 end
@@ -376,15 +377,23 @@ end
 ---fill a body by reading until the socket is closed
 ---@return string|nil
 ---@return nil|string
+---@return nil|string
 function HttpMessage:fill_closed_body()
-  local body, err = self._source("*a")
+  local body, err, partial = self._source("*a")
   if not body then
-    return nil, err
+    return nil, err, partial
   end
   return body
 end
 
+---push a chunk of bytes into self.body
+---@param chunk string
+function HttpMessage:_push_body(chunk)
+  self.body = (self.body or "") .. (chunk or "")
+end
+
 ---@return string|nil
+---@return nil|string
 ---@return nil|string
 function HttpMessage:fill_chunked_body_step()
   -- read chunk length with trailing new lines
@@ -405,9 +414,9 @@ function HttpMessage:fill_chunked_body_step()
     return nil, "invalid number for chunk length"
   end
 
-  local chunk, err = self._source(len2)
+  local chunk, err, partial = self._source(len2)
   if not chunk then
-    return nil, err
+    return nil, err, partial
   end
   -- clear new line
   self._source(2)
@@ -420,8 +429,8 @@ end
 function HttpMessage:fill_chunked_body()
   local ret, chunk, err = "", nil, nil
   repeat
-    chunk, err = HttpMessage.fill_chunked_body_step(self)
-    ret = ret .. (chunk or "")
+    chunk, err, partial = HttpMessage.fill_chunked_body_step(self)
+    ret = ret .. (chunk or partial or "")
   until err
   if err == "___eof___" then
     return ret
@@ -449,7 +458,8 @@ function HttpMessage:check_for_trailers()
   return 1
 end
 
----
+---attempt recieve the full body and set self.body to the bytes from the SourceFn
+---on error any partial bytes should be included in self.body
 ---@return nil|string
 function HttpMessage:fill_body()
   if self._source ~= nil
@@ -458,10 +468,11 @@ function HttpMessage:fill_body()
     if not ty then
       return err
     end
-    local body, err
+    local body, err, partial
     if ty.type == "length" then
-      body, err = self:fill_fixed_length_body(ty.length)
+      body, err, partial = self:fill_fixed_length_body(ty.length)
       if not body then
+        self:_push_body(partial)
         return err
       end
     elseif ty.type == "close" then
@@ -469,18 +480,20 @@ function HttpMessage:fill_body()
       -- will actually close, otherwise it will hang. The lack of
       -- a content-length header is not enough of a clue as the
       -- socket may be setup for keep-alive.
-      body, err = self:fill_closed_body()
+      body, err, partial = self:fill_closed_body()
       if not body then
+        self:_push_body(partial)
         return err
       end
     else
-      body, err = self:fill_chunked_body()
+      body, err, partial = self:fill_chunked_body()
       self:check_for_trailers()
       if not body then
+        self:_push_body(partial)
         return err
       end
     end
-    self.body = body
+    self:_push_body(body)
     self._received_body = true
   end
 end

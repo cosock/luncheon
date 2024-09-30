@@ -21,6 +21,21 @@ m.create_chunked_source = function(body)
     return ret
   end
 end
+
+m.create_timeing_out_source = function(body, timeout_after, timeout_err)
+  timeout_after = timeout_after or 3
+  timeout_err = timeout_err or "timeout"
+  local ct = 0
+  local inner_source = m.create_chunked_source(body)
+  return function(pat)
+    ct = ct + 1
+    if ct == timeout_after then
+      return nil, timeout_err
+    end
+    return inner_source(pat)
+  end
+end
+
 local function create_chunked_body(chunks, extensions, trailers)
   local body = ""
   local assert_body = ""
@@ -123,5 +138,8 @@ function m.assert_in_set(set, value)
   end
   error(string.format("Expected %s found %q", msg, value), 2)
 end
+
+m.response_first_line = response_first_line
+m.request_first_line = request_first_line
 
 return m
