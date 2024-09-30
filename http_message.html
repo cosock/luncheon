@@ -16,7 +16,7 @@
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
         <script src="_static/documentation_options.js?v=5929fcd5"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -122,7 +122,7 @@
 <em class="property"> </em><span class="sig-name descname"><span class="pre">new</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">socket</span></em><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.new" title="Link to this definition"></a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>socket</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">any</span></code></span>) – </p>
+<dd class="field-odd"><p><strong>socket</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">any</span></code></span>)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -133,7 +133,7 @@
 <dd><p>Construct a HttpMessage from a source function</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>source</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">SourceFn</span></code></span>) – </p>
+<dd class="field-odd"><p><strong>source</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">SourceFn</span></code></span>)</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">T</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
@@ -231,7 +231,7 @@ headers</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>key</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – </p></li>
+<li><p><strong>key</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>)</p></li>
 <li><p><strong>value</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">any</span></code></span>) – If not a string will call tostring</p></li>
 </ul>
 </dd>
@@ -251,7 +251,7 @@ will end up ignoring these values</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>key</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>) – </p></li>
+<li><p><strong>key</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span>)</p></li>
 <li><p><strong>value</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">any</span></code></span>) – If not a string will call tostring</p></li>
 </ul>
 </dd>
@@ -378,13 +378,16 @@ will end up ignoring these values</p>
 <dd><p>fill a body based on content-length</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>len</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">integer</span></code></span>) – </p>
+<dd class="field-odd"><p><strong>len</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">integer</span></code></span>)</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span></p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -400,6 +403,9 @@ will end up ignoring these values</p>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
 </dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
 </dl>
 </dd></dl>
 
@@ -412,6 +418,9 @@ will end up ignoring these values</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
 </dd>
 </dl>
 </dd></dl>
@@ -442,7 +451,9 @@ will end up ignoring these values</p>
 <dl class="lua method">
 <dt class="sig sig-object lua" id="HttpMessage.fill_body">
 <em class="property"> </em><span class="sig-name descname"><span class="pre">fill_body</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#HttpMessage.fill_body" title="Link to this definition"></a></dt>
-<dd><dl class="field-list simple">
+<dd><p>attempt recieve the full body and set self.body to the bytes from the SourceFn</p>
+<p>on error any partial bytes should be included in self.body</p>
+<dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">nil</span> <span class="pre">or</span> <span class="pre">str</span></code></span></p>
 </dd>
@@ -543,7 +554,7 @@ will end up ignoring these values</p>
 <dd><p>Collect the preamble and headers to the provided limit</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>max</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">integer</span></code></span>) – </p>
+<dd class="field-odd"><p><strong>max</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">integer</span></code></span>)</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
@@ -602,8 +613,8 @@ will end up ignoring these values</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>bytes</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span>) – </p></li>
-<li><p><strong>skip_length</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">boolean</span> <span class="pre">or</span> <span class="pre">nil</span></code></span>) – </p></li>
+<li><p><strong>bytes</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">str</span> <span class="pre">or</span> <span class="pre">nil</span></code></span>)</p></li>
+<li><p><strong>skip_length</strong> (<span><code class="xref lua lua-class docutils literal notranslate"><span class="pre">boolean</span> <span class="pre">or</span> <span class="pre">nil</span></code></span>)</p></li>
 </ul>
 </dd>
 </dl>
