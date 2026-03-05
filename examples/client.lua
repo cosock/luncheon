@@ -42,6 +42,10 @@ end
 
 local sock = socket.tcp()
 sock:connect('0.0.0.0', 8080)
+-- Without this timeout, a server that doesnt close when sending a response without
+-- a known length (i.e. no transfer-encoding: chunked or no content-length) will cause
+-- the client to hang waiting for the response.
+--sock:settimeout(3)
 
 local r = assert(lunch.Request.new('GET', '/', sock)
   :append_body('asdf'))
